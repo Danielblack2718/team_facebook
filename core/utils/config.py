@@ -1,0 +1,13 @@
+TOKEN="6635934086:AAE0Oe8V2JatOU_6BsZ_Bs6GZ0tnT7Nars0"
+ADMIN_ID=[612475751]
+ADMIN_CHANNEL_ID=-1002121520261
+class CHANNELS:
+    ALL_CHAT_LINK="@dfghd"
+    PROFITS_CHAT_LINK="@dfshfgd"
+    MANUALS_CHAT_LINK="@fdsgtdfg"
+    HOW_TO_WORK_LINK="https://vk.com"
+class DatabaseInfo:
+    MYSQL_HOST="localhost"
+    MYSQL_DATABASE="bot"
+    MYSQL_USER="root"
+    MYSQL_PASSWORD=""
