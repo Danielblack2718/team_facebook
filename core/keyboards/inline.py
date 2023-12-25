@@ -114,6 +114,58 @@ class InKeyboards:
         ]
 
     ])
+    smartsupp = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.new_smartsupp, callback_data="change_smartsupp")
+        ],
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),
+            InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
+        ]
+    ])
+    confirm_smartsupp = InlineKeyboardMarkup(inline_keyboard=[
+
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.smartsupp, callback_data="smartsupp")
+        ],
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),
+            InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
+        ]
+    ])
+
+    create_link = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.hungary, callback_data="hungary_link"),
+            InlineKeyboardButton(text=in_keyboard_texts.austria, callback_data="austria_link")
+        ],
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),
+            InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
+        ]
+    ])
+    hungary_link  = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.serviceHungaryJofogas, callback_data="hungary_jofogas"),
+            InlineKeyboardButton(text=in_keyboard_texts.serviceHungaryFacebook, callback_data="hungary_facebook")
+        ],
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),
+            InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
+        ]
+
+    ])
+    austria_link = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.serviceAustriaWillhaben, callback_data="austria_willhaben"),
+            InlineKeyboardButton(text=in_keyboard_texts.serviceAustriaFacebook, callback_data="austria_facebook")
+        ],
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),
+            InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
+        ]
+
+    ])
 
 class AdminInKeyboards:
     @staticmethod

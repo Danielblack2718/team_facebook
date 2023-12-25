@@ -15,7 +15,7 @@ class User:
         cursor = connection.cursor()
         if refferer == "0":
             refferer = None
-        cursor.execute("INSERT INTO users (id, username, ref, supportChatType, nickname) VALUES (%s, %s, %s, %s, %s)", (id, str(username), str(refferer), "Smartsupp", str(username)))
+        cursor.execute("INSERT INTO users (id, username, ref, supportChat, nickname) VALUES (%s, %s, %s, %s, %s)", (id, str(username), str(refferer), 1, str(username)))
 
         Database.commit_and_close(connection)
 
@@ -69,6 +69,30 @@ class User:
                 Database.commit_and_close(connection)
 
                 return updated_user['nickname'] if updated_user else None
+            else:
+                Database.commit_and_close(connection)
+                return "error"
+        except:
+            return "error"
+    @staticmethod
+    def change_smartsupp(id, key):
+        if len(key) > 10:
+            return "error"
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+        try:
+            # Assuming `hide` is a column in the `user` table
+            query = "UPDATE users SET supportChatApi = %s WHERE id = %s"
+            cursor.execute(query, (key, id))
+
+            # Check the number of affected rows
+            if cursor.rowcount > 0:
+                cursor.execute("SELECT supportChatApi FROM users WHERE id = %s", (id,))
+                updated_user = cursor.fetchone()
+
+                Database.commit_and_close(connection)
+
+                return updated_user['supportChatApi'] if updated_user else None
             else:
                 Database.commit_and_close(connection)
                 return "error"

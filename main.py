@@ -11,7 +11,7 @@ from core.utils.config import TOKEN, ADMIN_CHANNEL_ID
 from core.utils.texts import texts, start_texts, admin_texts, in_keyboard_texts
 from core.utils.paths import paths
 from core.functions.function import Admin, User
-from core.states.state import FriendTextWait, ChangeNickname
+from core.states.state import FriendTextWait, ChangeNickname, ChangeSmartSupp
 
 Form_router = Router()
 Bot_router = Router()
@@ -137,7 +137,7 @@ async def register_stage_1(callback: types.CallbackQuery, state: FSMContext):
     print(message_id)
     print("1-1-1-1-1--1-1-1--1-")
     print(chat_id, username, message_id, sep='\n---------')
-    User.add_user(chat_id, username, refferer,)
+    User.add_user(chat_id, username, refferer)
     delete_messge = await callback.message.edit_text(text=admin_texts.confirmed_user(username, callback.from_user.username))
     await bot.send_message(text=texts.confirm_user, chat_id=chat_id)
     await bot.edit_message_caption(chat_id=chat_id, message_id=int(message_id), caption=texts.menu, reply_markup=InKeyboards.menu)
@@ -147,7 +147,7 @@ async def register_stage_1(callback: types.CallbackQuery, state: FSMContext):
     data = callback.data.split('#_')
     chat_id = data[1]
     username = data[2]
-    print(chat_id, username, message_id, sep='\n---------')
+    print(chat_id, username, sep='\n---------')
     delete_message = await callback.message.edit_text(text=admin_texts.not_confirmed_user(username, callback.from_user.username))
     await bot.send_message(text=texts.not_confirm_user, chat_id=chat_id)
 
@@ -187,6 +187,76 @@ async def nickname(callback: types.CallbackQuery):
         parse_mode="MARKDOWN"
     )
 
+@dp.callback_query(F.data == "smartsupp")
+async def smartsupp(callback: types.CallbackQuery):
+    user = User.find_user(callback.from_user.id)
+    api = "Не указан"
+    if user['supportChatApi'] is not None:
+        api = user['supportChatApi']
+    await callback.message.edit_caption(
+        caption=texts.smartsupp(api),
+        reply_markup=InKeyboards.smartsupp
+    )
+
+@dp.callback_query(F.data == "change_smartsupp")
+async def change_smartsupp(callback: types.CallbackQuery, state: FSMContext):
+    user = User.find_user(callback.from_user.id)
+    api = "Не указан"
+    if user['supportChatApi'] is not None:
+        api = user['supportChatApi']
+    message = await callback.message.edit_caption(
+        caption=texts.new_smartsupp,
+        reply_markup=InKeyboards.one_button("Оставить @" + api, "smartsupp"),
+        parse_mode="MARKDOWN"
+    )
+    await state.set_state(ChangeSmartSupp.message)
+    await state.update_data(message=message.message_id)
+    await state.set_state(ChangeSmartSupp.last_key)
+    await state.update_data(last_key=api)
+    await state.set_state(ChangeSmartSupp.key)
+
+@Bot_router.message(ChangeSmartSupp.key)
+async def change_smartsupp_confirm(message: types.Message, state: FSMContext):
+    data = await state.update_data(key=message.text)
+    key = User.change_smartsupp(message.from_user.id, message.text)
+    print(key)
+    if key != "error":
+        await bot.edit_message_caption(
+            chat_id=message.chat.id,
+            message_id=data['message'],
+            caption=texts.confirm_smartsupp(message.text),
+            reply_markup=InKeyboards.confirm_smartsupp
+
+        )
+        await state.clear()
+    else:
+        await bot.edit_message_caption(
+            chat_id=message.chat.id,
+            message_id=data['message'],
+            caption=texts.error_nickname,
+            reply_markup=InKeyboards.one_button("Оставить @" + data['last_key'], "smartsupp")
+        )
+    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+
+@dp.callback_query(F.data == "create_link")
+async def create_link(callback: types.CallbackQuery):
+    await callback.message.edit_caption(
+        caption=texts.create_link_caption,
+        reply_markup=InKeyboards.create_link
+    )
+
+@dp.callback_query(F.data == "hungary_link")
+async def hungary_link(callback: types.CallbackQuery):
+    await callback.message.edit_caption(
+        caption=texts.select_service,
+        reply_markup=InKeyboards.hungary_link
+    )
+@dp.callback_query(F.data == "austria_link")
+async def hungary_link(callback: types.CallbackQuery):
+    await callback.message.edit_caption(
+        caption=texts.select_service,
+        reply_markup=InKeyboards.austria_link
+    )
 @dp.callback_query(F.data == "change_nickname")
 async def change_nickname(callback: types.CallbackQuery, state: FSMContext):
     user = User.find_user(callback.from_user.id)
