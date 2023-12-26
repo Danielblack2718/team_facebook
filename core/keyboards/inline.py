@@ -20,7 +20,6 @@ class InKeyboards:
                                  callback_data="registration_stage_1_friends")
         ]
     ])
-
     menu = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text=in_keyboard_texts.createLink, callback_data="create_link")
@@ -107,13 +106,6 @@ class InKeyboards:
             InlineKeyboardButton(text=in_keyboard_texts.profile, callback_data="profile")
         ]
     ])
-    refferals = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),
-            InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
-        ]
-
-    ])
     smartsupp = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text=in_keyboard_texts.new_smartsupp, callback_data="change_smartsupp")
@@ -133,39 +125,64 @@ class InKeyboards:
             InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
         ]
     ])
-
-    create_link = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text=in_keyboard_texts.hungary, callback_data="hungary_link"),
-            InlineKeyboardButton(text=in_keyboard_texts.austria, callback_data="austria_link")
-        ],
+    menu_and_tools = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),
             InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
         ]
     ])
-    hungary_link  = InlineKeyboardMarkup(inline_keyboard=[
+    cancel = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text=in_keyboard_texts.serviceHungaryJofogas, callback_data="hungary_jofogas"),
-            InlineKeyboardButton(text=in_keyboard_texts.serviceHungaryFacebook, callback_data="hungary_facebook")
-        ],
-        [
-            InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),
-            InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
+
+            InlineKeyboardButton(text=in_keyboard_texts.cancel, callback_data="create_link")
+        ]
+    ])
+    @staticmethod
+    def create_link(countries):
+        # Создаем кнопки для стран
+        country_buttons = [
+            InlineKeyboardButton(text=in_keyboard_texts.country(country['flag'], country['name']), callback_data=f"create_link_country_{country['id']}")
+            for country in countries
         ]
 
-    ])
-    austria_link = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text=in_keyboard_texts.serviceAustriaWillhaben, callback_data="austria_willhaben"),
-            InlineKeyboardButton(text=in_keyboard_texts.serviceAustriaFacebook, callback_data="austria_facebook")
-        ],
-        [
+        # Добавляем кнопки "Menu" и "Tools" внизу
+
+
+        # Разбиваем кнопки по рядам (по две кнопки в каждом ряду)
+        rows = [country_buttons[i:i + 2] for i in range(0, len(country_buttons), 2)]
+
+        rows.append([
             InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),
             InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
-        ]
+        ])
+        # Создаем клавиатуру
+        create_link = InlineKeyboardMarkup(inline_keyboard=rows)
 
-    ])
+        return create_link
+
+    @staticmethod
+    def servicesCountry(services):
+        # Создаем кнопки для стран
+        if services[0]['country']['country_active']:
+            service_buttons = [
+                InlineKeyboardButton(text=in_keyboard_texts.servicesCountry(service['country']['flag'], service['name']),
+                                     callback_data=f"create_link_service_{service['name']}")
+                for service in services
+            ]
+
+        # Добавляем кнопки "Menu" и "Tools" внизу
+
+        # Разбиваем кнопки по рядам (по две кнопки в каждом ряду)
+        rows = [service_buttons[i:i + 2] for i in range(0, len(service_buttons), 2)]
+
+        rows.append([
+            InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),
+            InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
+        ])
+        # Создаем клавиатуру
+        services_country = InlineKeyboardMarkup(inline_keyboard=rows)
+
+        return services_country
 
 class AdminInKeyboards:
     @staticmethod

@@ -62,7 +62,12 @@ class texts():
         return  f"Вы успешно поменяли ключ Smartsupp на {key}"
     select_service = "Выберите сервис:"
 
+    none_active_countries = "Нет активных стран"
+    none_active_services = "Нет активных сервисов"
     create_link_caption ="Наша команда неустанно трудятся, чтобы укрепить доверие мамонта к вам постоянно совершенствуя наши фишинги. Мы проводим множество бессонных ночей, постоянно обдумывая, как улучшить наш продукт, чтобы вы могли видеть конкретные результаты своей работы в виде увеличения профитов!"
+    link_name = "Введите название ссылки:"
+    link_description = "Введите описание:"
+    link_price = "Введите цену:"
 class in_keyboard_texts:
     inlineStart = "⚡️ПЕРЕЙТИ К ЗАЯВКЕ⚡️"
     confirmRules = "Я принимаю"
@@ -88,12 +93,14 @@ class in_keyboard_texts:
     smartsupp = "💬SmartSupp💬"
     new_smartsupp = "🗯Указать новый ключ SmartSupp🗯"
     ad = "🗂Мои обьявления🗂"
-    hungary = "🇭🇺Венгрия🇭🇺"
-    austria = "🇦🇹Австрия🇦🇹"
-    serviceHungaryJofogas = "🇭🇺JOFOGAS.HU"
-    serviceHungaryFacebook = "🇭🇺Facebook"
-    serviceAustriaFacebook = "🇦🇹Facebook"
-    serviceAustriaWillhaben = "🇦🇹Willhaben"
+    cancel ="Отмена"
+    @staticmethod
+    def country(flag, name):
+        return flag+name+flag
+
+    @staticmethod
+    def servicesCountry(flag, name):
+        return flag+name
 
 class start_texts:
     start = "🚀OVIUM — Мы обещаем обеспечить финансовую свободу всем, кто разделяет наши ценности и верно следует за нами!"

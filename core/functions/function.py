@@ -113,3 +113,50 @@ class User:
 
         return bool(result)
 
+class Country:
+    @staticmethod
+    def get_all_countries():
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        cursor.execute("SELECT * FROM countries WHERE active = %s", (True,))
+        result = cursor.fetchall()
+        if len(result) == 0:
+            Database.close_mysql_connection(connection)
+            print(False)
+            return False
+        print(result)
+        Database.close_mysql_connection(connection)
+        return result
+
+class Service:
+    @staticmethod
+    def get_services_in_country(country):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        query = """
+        SELECT services.id,services.name, services.active, services.country_id, countries.id AS country_id, countries.name AS country_name, countries.flag AS country_flag, countries.active AS country_active
+        FROM services
+        JOIN countries ON services.country_id = countries.id
+        WHERE services.active = 1 AND services.country_id = %s
+        """
+
+        cursor.execute(query, (country,))
+        result = cursor.fetchall()
+
+        if len(result) == 0:
+            Database.close_mysql_connection(connection)
+            print(False)
+            return False
+
+        for row in result:
+            print(row)
+            row['country'] = {'id': row['country_id'], 'name': row['country_name'], 'flag': row['country_flag'], 'country_active':row['country_active']}
+            del row['country_id']  # Убираем избыточный столбец
+            del row['country_flag']
+            del row['country_name']
+            del row['country_active']
+        print(result)
+        Database.close_mysql_connection(connection)
+        return result

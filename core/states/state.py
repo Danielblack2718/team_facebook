@@ -18,3 +18,6 @@ class CreateLink(StatesGroup):
     name = State()
     price = State()
     description = State()
+    message = State()
+
+
