@@ -15,9 +15,20 @@ class ChangeSmartSupp(StatesGroup):
     last_key = State()
 
 class CreateLink(StatesGroup):
+    service = State()
+    number = State()
     name = State()
     price = State()
     description = State()
     message = State()
+    author = State()
+    address = State()
+    photo = State()
+    checker = State()
 
+class ChangePrice(StatesGroup):
+    price = State()
+    message = State()
+    id =  State()
+    last_price = State()
 

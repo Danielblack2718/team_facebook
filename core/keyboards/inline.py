@@ -20,18 +20,26 @@ class InKeyboards:
                                  callback_data="registration_stage_1_friends")
         ]
     ])
-    menu = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text=in_keyboard_texts.createLink, callback_data="create_link")
-        ],
-        [
-            InlineKeyboardButton(text=in_keyboard_texts.profile, callback_data="profile"),
-            InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
-        ],
-        [
-            InlineKeyboardButton(text=in_keyboard_texts.channels, callback_data="channels"),
-        ],
-    ])
+    @staticmethod
+    def menu(admin):
+
+        keyboard = [
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.createLink, callback_data="create_link")
+            ],
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.profile, callback_data="profile"),
+                InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
+            ],
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.channels, callback_data="channels"),
+            ],
+        ]
+        if admin:
+            keyboard.append([InlineKeyboardButton(text=in_keyboard_texts.admin_panel, callback_data="admin")])
+
+        kb = InlineKeyboardMarkup(inline_keyboard=keyboard)
+        return kb
 
     profile = InlineKeyboardMarkup(inline_keyboard=[
         [
@@ -42,6 +50,78 @@ class InKeyboards:
             InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
         ]
     ])
+    @staticmethod
+    def checker_in_create_link(link_id):
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.checker_create_link_on, callback_data=f"checker_change_{link_id}"),
+            ],
+            [
+              InlineKeyboardButton(text=in_keyboard_texts.skip, callback_data=f"link_{link_id}")
+            ]
+        ])
+    skip = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.skip, callback_data="skip_photo_create_link")
+        ],
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.cancel, callback_data="create_link")
+        ]
+    ])
+    @staticmethod
+    def back(id):
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.back, callback_data=f"link_{id}")
+            ]
+        ])
+    @staticmethod
+    def link_info(id, checker):
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text= in_keyboard_texts.link_check_off if checker else in_keyboard_texts.link_check_on, callback_data=f"checker_change_{id}")
+            ],
+            [
+              InlineKeyboardButton(text=in_keyboard_texts.link_change_price, callback_data=f"change_link_price_{id}")
+            ],
+            [
+              InlineKeyboardButton(text=in_keyboard_texts.link_delete, callback_data=f"delete_*link_*{id}")
+            ],
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="menu")
+            ]
+        ])
+    @staticmethod
+    def links(links_info):
+        # Создаем кнопки для стран
+        print(links_info)
+        links_buttons = [
+            InlineKeyboardButton(text=link['name'],callback_data=f"link_{link['id']}")
+            for link in links_info
+        ]
+        # Добавляем кнопки "Menu" и "Tools" внизу
+
+        # Разбиваем кнопки по рядам (по две кнопки в каждом ряду)
+        rows = [links_buttons[i:i + 2] for i in range(0, len(links_buttons), 2)]
+
+        rows.append([
+            InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),
+            InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
+        ])
+        # Создаем клавиатуру
+        links_button = InlineKeyboardMarkup(inline_keyboard=rows)
+        return links_button
+
+    @staticmethod
+    def delete_link(id):
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.delete_link_confirm, callback_data=f"delete_link_confirm_{id}")
+            ],
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.back, callback_data=f"link_{id}")
+            ]
+        ])
 
     channels = InlineKeyboardMarkup(inline_keyboard=[
         [
@@ -91,7 +171,7 @@ class InKeyboards:
 
     tools = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text=in_keyboard_texts.ad, callback_data="ad"),
+            InlineKeyboardButton(text=in_keyboard_texts.ad, callback_data="links"),
             InlineKeyboardButton(text=in_keyboard_texts.createLink, callback_data="create_link")
         ],
         [
@@ -166,7 +246,7 @@ class InKeyboards:
         if services[0]['country']['country_active']:
             service_buttons = [
                 InlineKeyboardButton(text=in_keyboard_texts.servicesCountry(service['country']['flag'], service['name']),
-                                     callback_data=f"create_link_service_{service['name']}")
+                                     callback_data=f"create_link_service_{service['id']}")
                 for service in services
             ]
 

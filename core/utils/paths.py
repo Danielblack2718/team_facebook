@@ -3,4 +3,5 @@ class paths():
     menu =  "core/assets/menu.jpg"
     profile = "core/assets/profile.jpg"
     tools = "core/assets/tools.jpg"
-    channels = "core/assets/link.jpg"
+    channels = "core/assets/channels.jpg"
+    link = "core/assets/link.jpg"

@@ -10,8 +10,8 @@ from core.keyboards.inline import InKeyboards, AdminInKeyboards
 from core.utils.config import TOKEN, ADMIN_CHANNEL_ID
 from core.utils.texts import texts, start_texts, admin_texts, in_keyboard_texts
 from core.utils.paths import paths
-from core.functions.function import Admin, User, Country, Service
-from core.states.state import FriendTextWait, ChangeNickname, ChangeSmartSupp, CreateLink
+from core.functions.function import Admin, User, Country, Service, Link
+from core.states.state import FriendTextWait, ChangeNickname, ChangeSmartSupp, CreateLink, ChangePrice
 
 Form_router = Router()
 Bot_router = Router()
@@ -24,6 +24,7 @@ logging.basicConfig(level=logging.INFO)
 @dp.message(CommandStart())
 async def command_start(message: types.Message):
     user_id = message.from_user.id
+    user = User.find_user(callback.from_user.id)
     if await User.is_user_exists(user_id):
         photo = FSInputFile(path=paths.menu)
         # Пользователь есть в базе, отправляем главное меню
@@ -31,7 +32,7 @@ async def command_start(message: types.Message):
             chat_id=message.chat.id,
             caption=texts.menu,
             photo=photo,
-            reply_markup=InKeyboards.menu
+            reply_markup=InKeyboards.menu(user['admin'])
         )
     else:
         if message.from_user.username is None:
@@ -140,7 +141,7 @@ async def register_stage_1(callback: types.CallbackQuery, state: FSMContext):
     User.add_user(chat_id, username, refferer)
     delete_messge = await callback.message.edit_text(text=admin_texts.confirmed_user(username, callback.from_user.username))
     await bot.send_message(text=texts.confirm_user, chat_id=chat_id)
-    await bot.edit_message_caption(chat_id=chat_id, message_id=int(message_id), caption=texts.menu, reply_markup=InKeyboards.menu)
+    await bot.edit_message_caption(chat_id=chat_id, message_id=int(message_id), caption=texts.menu, reply_markup=InKeyboards.menu(False))
 
 @dp.callback_query(F.data.startswith('bannewuser#_'))
 async def register_stage_1(callback: types.CallbackQuery, state: FSMContext):
@@ -244,19 +245,31 @@ async def create_link(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
     print(countries)
     if countries != False:
-        await callback.message.edit_caption(
-            caption=texts.create_link_caption,
+        media = InputMediaPhoto(
+            media=FSInputFile(
+                path=paths.link
+            ),
+            caption=texts.create_link_caption
+        )
+        await callback.message.edit_media(
+            media=media,
             reply_markup=InKeyboards.create_link(countries)
         )
     else:
-        await callback.message.edit_caption(
-            caption=texts.none_active_countries,
+        media = InputMediaPhoto(
+            media=FSInputFile(
+                path=paths.link
+            ),
+            caption=texts.none_active_countries
+        )
+        await callback.message.edit_media(
+            media=media,
             reply_markup=InKeyboards.error_get_countries
         )
 
 
 @dp.callback_query(F.data.startswith("create_link_country_"))
-async def hungary_link(callback: types.CallbackQuery):
+async def create_link_country(callback: types.CallbackQuery):
     data = callback.data.split('_')[3]
     print(data)
     services = Service.get_services_in_country(data)
@@ -273,7 +286,7 @@ async def hungary_link(callback: types.CallbackQuery):
         )
 
 @dp.callback_query(F.data.startswith("create_link_service_"))
-async def hungary_link(callback: types.CallbackQuery, state:FSMContext):
+async def create_link_service(callback: types.CallbackQuery, state:FSMContext):
     data = callback.data.split('_')[3]
     message = await callback.message.edit_caption(
         caption=texts.link_name,
@@ -281,7 +294,10 @@ async def hungary_link(callback: types.CallbackQuery, state:FSMContext):
     )
     await state.set_state(CreateLink.message)
     await state.update_data(message=message.message_id)
+    await state.set_state(CreateLink.service)
+    await state.update_data(service=data)
     await state.set_state(CreateLink.name)
+
 
 @Bot_router.message(CreateLink.name)
 async def create_link_name(message: types.Message, state:FSMContext):
@@ -297,7 +313,7 @@ async def create_link_name(message: types.Message, state:FSMContext):
 
 
 @Bot_router.message(CreateLink.price)
-async def create_link_name(message: types.Message, state:FSMContext):
+async def create_link_price(message: types.Message, state:FSMContext):
     data = await state.update_data(price=message.text)
     await state.set_state(CreateLink.description)
     await bot.delete_message(message_id=message.message_id, chat_id=message.chat.id)
@@ -308,18 +324,168 @@ async def create_link_name(message: types.Message, state:FSMContext):
         reply_markup=InKeyboards.cancel
     )
 
+
 @Bot_router.message(CreateLink.description)
-async def create_link_name(message: types.Message, state:FSMContext):
+async def create_link_description(message: types.Message, state:FSMContext):
     data = await state.update_data(description=message.text)
-    await state.clear()
+    await state.set_state(CreateLink.author)
     await bot.delete_message(message_id=message.message_id, chat_id=message.chat.id)
     await bot.edit_message_caption(
         chat_id=message.chat.id,
         message_id=data['message'],
-        caption=str(data),
+        caption=texts.link_author,
         reply_markup=InKeyboards.cancel
     )
 
+@Bot_router.message(CreateLink.author)
+async def create_link_author(message: types.Message, state:FSMContext):
+    data = await state.update_data(author=message.text)
+    await state.set_state(CreateLink.photo)
+    await bot.delete_message(message_id=message.message_id, chat_id=message.chat.id)
+    await bot.edit_message_caption(
+        chat_id=message.chat.id,
+        message_id=data['message'],
+        caption=texts.link_photo,
+        reply_markup=InKeyboards.skip
+    )
+
+@Bot_router.message(CreateLink.photo)
+async def create_link_author(message: types.Message, state:FSMContext):
+    data = await state.update_data(photo=message.text)
+
+    await state.set_state(CreateLink.number)
+    await bot.delete_message(message_id=message.message_id, chat_id=message.chat.id)
+    await bot.edit_message_caption(
+        chat_id=message.chat.id,
+        message_id=data['message'],
+        caption=texts.link_number,
+        reply_markup=InKeyboards.cancel
+    )
+
+@dp.callback_query(F.data == "skip_photo_create_link")
+async def skip_photo_create_link(callback: types.CallbackQuery, state:FSMContext):
+    data = await state.update_data(photo=0)
+    await state.set_state(CreateLink.number)
+    await bot.edit_message_caption(
+        chat_id=callback.message.chat.id,
+        message_id=data['message'],
+        caption=texts.link_number,
+        reply_markup=InKeyboards.cancel
+    )
+
+@Bot_router.message(CreateLink.number)
+async def create_link_address(message: types.Message, state:FSMContext):
+    data = await state.update_data(number=message.text)
+    await state.set_state(CreateLink.address)
+    await bot.edit_message_caption(
+        chat_id=message.chat.id,
+        message_id=data['message'],
+        caption=texts.link_address,
+        reply_markup=InKeyboards.cancel
+    )
+
+@Bot_router.message(CreateLink.address)
+async def create_link_address(message: types.Message, state:FSMContext):
+    data = await state.update_data(address=message.text)
+    await state.clear()
+    await bot.delete_message(message_id=message.message_id, chat_id=message.chat.id)
+    data['id'] = message.from_user.id
+    link = Link.create_link(data)
+    print(link)
+    print('___________________')
+    print(data)
+    await bot.edit_message_caption(
+        chat_id=message.chat.id,
+        message_id=data['message'],
+        caption=texts.link_checker,
+        reply_markup=InKeyboards.checker_in_create_link(link['id'])
+    )
+
+@dp.callback_query(F.data.startswith("checker_change_"))
+async def create_link_checker(callback: types.CallbackQuery, state: FSMContext):
+    data = callback.data.split('_')[2]
+    link1 = Link.change_checker(data)
+    print(data)
+    link = Link.find_link(data)
+    name = link['country']['flag']+link['name']
+    await callback.message.edit_caption(
+        caption=texts.link(link['author'], link['price'], link['author'], link['number'], link['address'], link['checker'], "23432", name),
+        reply_markup=InKeyboards.link_info(data, link['checker'])
+    )
+
+@dp.callback_query(F.data.startswith("delete_*link_*"))
+async def link_delete(callback: types.CallbackQuery, state: FSMContext):
+    data = callback.data.split('_*')[2]
+    print(data)
+    link = Link.find_link(data)
+    print(link)
+    await callback.message.edit_caption(
+        caption=texts.delete_link(link['name']),
+        reply_markup=InKeyboards.delete_link(link['id'])
+    )
+
+@dp.callback_query(F.data.startswith("delete_link_confirm_"))
+async def delete_link(callback: types.CallbackQuery):
+    data = callback.data.split('_')[3]
+    print(data)
+    link = Link.delete_link(data)
+    print(link)
+    await callback.message.edit_caption(
+        caption=texts.delete_link_confirm(link['name']),
+        reply_markup=InKeyboards.menu_and_tools
+    )
+@dp.callback_query(F.data == "links")
+async def links_info(callback: types.CallbackQuery):
+    links = Link.get_links_in_user(callback.from_user.id)
+    print(links)
+    count = len(links)
+    await callback.message.edit_caption(
+        caption=texts.links(count),
+        reply_markup=InKeyboards.links(links)
+    )
+
+@dp.callback_query(F.data.startswith("link_"))
+async def link_info(callback: types.CallbackQuery, state: FSMContext):
+    await state.clear()
+    data = callback.data.split('_')[1]
+    print(data)
+    link = Link.find_link(data)
+    name = link['country']['flag'] + link['name']
+    await callback.message.edit_caption(
+        caption=texts.link(link['author'], link['price'], link['author'], link['number'], link['address'], link['checker'], "23432", name),
+        reply_markup=InKeyboards.link_info(data, link['checker'])
+    )
+
+@dp.callback_query(F.data.startswith("change_link_price_"))
+async def link_change_price(callback: types.CallbackQuery, state:FSMContext):
+    data = callback.data.split('_')[3]
+    link = Link.find_link(data)
+    await callback.message.edit_caption(
+        caption=texts.change_price_link,
+        reply_markup=InKeyboards.back(data)
+    )
+    await state.set_state(ChangePrice.message)
+    await state.update_data(message=callback.message.message_id)
+    await state.set_state(ChangePrice.last_price)
+    await state.update_data(last_price=link['price'])
+    await state.set_state(ChangePrice.id)
+    await state.update_data(id=link['id'])
+    await state.set_state(ChangePrice.price)
+
+@Bot_router.message(ChangePrice.price)
+async def change_price(message: types.Message,state:FSMContext):
+    data = await state.update_data(price=message.text)
+    link = Link.change_price(data['id'], message.text)
+    caption = texts.change_price_link_success(message.text)
+    await message.delete()
+    if not link:
+        caption = texts.change_price_link_error
+    await bot.edit_message_caption(
+        chat_id=message.chat.id,
+        message_id=data['message'],
+        caption=caption,
+        reply_markup=InKeyboards.back(data['id'])
+    )
 @dp.callback_query(F.data == "change_nickname")
 async def change_nickname(callback: types.CallbackQuery, state: FSMContext):
     user = User.find_user(callback.from_user.id)
@@ -376,21 +542,37 @@ async def referals(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data == "menu")
 async def menu(callback: types.CallbackQuery):
+    user = User.find_user(callback.from_user.id)
     media = InputMediaPhoto(media=FSInputFile(path=paths.menu),
                             caption=texts.menu)
     await callback.message.edit_media(
-       media=media,
-        reply_markup=InKeyboards.menu
+        media=media,
+        reply_markup=InKeyboards.menu(user['admin'])
     )
 
 @dp.callback_query(F.data == "channels")
-async def links(callback: types.CallbackQuery):
+async def channels(callback: types.CallbackQuery):
     media = InputMediaPhoto(media=FSInputFile(path=paths.channels),
                             caption=texts.channels)
     await callback.message.edit_media(
         media=media,
         reply_markup=InKeyboards.channels
     )
+
+
+@dp.callback_query(F.data == "admin")
+async def admin(callback: types.CallbackQuery):
+    user = User.find_user(callback.from_user.id)
+    if not user['admin']:
+        await callback.message.edit_caption(
+            caption=texts.aadmin_error,
+            reply_markup=InKeyboards.menu(False)
+        )
+        return
+    await callback.message.edit_caption(
+        caption=texts.admin_menu()
+    )
+
 # Запуск бота
 async def main():
     dp.include_router(Form_router)

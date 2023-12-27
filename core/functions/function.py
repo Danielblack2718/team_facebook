@@ -5,6 +5,61 @@ class Admin:
     def get_admins():
         return ADMIN_ID
 
+    @staticmethod
+    def get_admin_menu():
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor()
+
+        try:
+            cursor.execute("SELECT COUNT(*) FROM users")
+            users_count = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(*) FROM services")
+            services_count = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(*) FROM profits")
+            profits_count = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(*) FROM links")
+            links_count = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(*) FROM requests")
+            requests_count = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(*) FROM requests WHERE status = 'wait'")
+            requests_wait_count = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(*) FROM requests WHERE status = 'accepted'")
+            requests_accepted_count = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(*) FROM requests WHERE status = 'error'")
+            request_error_count = cursor.fetchone()[0]
+
+            cursor.execute("SELECT SUM(non_paid_amount) FROM non_paid_profits")
+            sum_non_paid = cursor.fetchone()[0]
+
+            cursor.execute("SELECT SUM(paid_amount) FROM paid_profits")
+            sum_paid = cursor.fetchone()[0]
+
+            cursor.execute("SELECT percent FROM worker_percent WHERE id = 1")
+            percent = cursor.fetchone()[0]
+
+            # Возвращаем массив с данными
+            return {
+                "users_count": users_count,
+                "services_count": services_count,
+                "profits_count": profits_count,
+                "links_count": links_count,
+                "requests_count": requests_count,
+                "requests_wait_count": requests_wait_count,
+                "requests_accepted_count": requests_accepted_count,
+                "request_error_count": request_error_count,
+                "sum_non_paid": sum_non_paid,
+                "sum_paid": sum_paid,
+                "percent": percent
+            }
+        finally:
+            Database.close_mysql_connection(connection)
 
 
 class User:
@@ -160,3 +215,159 @@ class Service:
         print(result)
         Database.close_mysql_connection(connection)
         return result
+
+
+class Link:
+
+    @staticmethod
+    def create_link(data):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        name = data['name']
+        user_id = data['id']
+        price = data['price']
+        service_id = data['service']
+        description = data['description']
+        checker = 0
+        photo = data['photo']
+        address = data['address']
+        author = data['author']
+        number  = data['number']
+
+
+        cursor.execute("INSERT INTO links (name, price, service, description, checker, photo, address, author, number, user) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (name, price, service_id, description, checker, photo, address, author, number, user_id))
+
+        cursor.execute("SELECT * FROM links WHERE id = LAST_INSERT_ID()")
+
+        # Извлекаем данные
+        created_link_data = cursor.fetchone()
+
+        # Подтверждаем транзакцию и закрываем соединение
+        Database.commit_and_close(connection)
+
+        # Возвращаем данные созданной записи
+        return created_link_data
+
+    @staticmethod
+    def change_checker(id):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        # Предположим, что у вас есть таблица links и поле checker, которое вы хотите обновить
+        update_query = "UPDATE links SET checker = NOT checker WHERE id = %s"
+        cursor.execute(update_query, (id,))
+
+        # Подтверждаем транзакцию и закрываем соединение
+        Database.commit_and_close(connection)
+
+        return True
+
+    @staticmethod
+    def change_price(id, price):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        try:
+            # Предположим, что у вас есть таблица links и поле checker, которое вы хотите обновить
+            update_query = "UPDATE links SET price = %s WHERE id = %s"
+            cursor.execute(update_query, (price, id))
+
+            # Подтверждаем транзакцию и закрываем соединение
+            Database.commit_and_close(connection)
+
+            return True
+        except Exception as e:
+            print(f"Error: {e}")
+            Database.close_mysql_connection(connection)
+            return False
+
+    @staticmethod
+    def get_links_in_user(user_id):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        try:
+            # Предположим, что у вас есть таблица links и поле user_id, которое связывает ссылки с пользователями
+            print(user_id)
+            select_query = "SELECT * FROM links WHERE user = %s"
+            cursor.execute(select_query, (user_id,))
+
+            result = cursor.fetchall()
+
+            Database.close_mysql_connection(connection)
+            return result
+        except Exception as e:
+            print(f"Error: {e}")
+            Database.close_mysql_connection(connection)
+            return False
+
+    @staticmethod
+    def delete_link(id):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        try:
+            name_query = "SELECT name FROM links WHERE id = %s"
+            cursor.execute(name_query, (id,))
+            result = cursor.fetchone()
+            # Предположим, что у вас есть таблица links и вы хотите удалить запись с указанным id
+            delete_query = "DELETE FROM links WHERE id = %s"
+            cursor.execute(delete_query, (id,))
+
+            # Подтверждаем транзакцию и закрываем соединение
+            Database.commit_and_close(connection)
+
+            return result
+        except Exception as e:
+            print(f"Error: {e}")
+            Database.close_mysql_connection(connection)
+            return False
+    @staticmethod
+    def find_link(id):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        query = """
+            SELECT links.*, services.id AS service_id, services.name AS service_name, services.country_id AS service_country, services.active AS service_active,
+             countries.id AS countries_id, countries.name AS countries_name, countries.flag AS countries_flag, countries.active AS countries_active
+            FROM links
+            JOIN services ON links.service = services.id
+            JOIN countries ON services.country_id = countries.id
+            WHERE links.id = %s
+        """
+
+        cursor.execute(query, (id,))
+        result = cursor.fetchall()
+        print(result)
+        Database.close_mysql_connection(connection)
+
+        if len(result) == 0:
+            return False
+
+        for row in result:
+            row['service'] = {
+                'id': row['service_id'],
+                'name': row['service_name'],
+                'country_id': row['service_country'],
+                'active': row['service_active']
+                # Добавьте остальные поля, если нужно
+            }
+            row['country'] = {
+                'id': row['countries_id'],
+                'name': row['countries_name'],
+                'flag': row['countries_flag'],
+                'active': row['countries_active']
+                # Добавьте остальные поля, если нужно
+            }
+            del row['service_id']
+            del row['service_name']
+            del row['service_country']
+            del row['service_active']
+            del row['countries_id']
+            del row['countries_name']
+            del row['countries_flag']
+            del row['countries_active']
+
+        print(result)
+        return result[0]
