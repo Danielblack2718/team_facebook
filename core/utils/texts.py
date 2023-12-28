@@ -122,6 +122,13 @@ class texts():
 💳 Сумма выплаченных профитов: {sumPaid} USD
 
 💴 Процент воркера с залёта: {percent}%'''
+
+    stop_work = "🩸STOP WORK"
+    @staticmethod
+    def stop_work_text(count):
+        return f"✅Текст отправлен {count} пользователям"
+
+    admin_send_all  = "Введите сообщение для рассылки:"
 class in_keyboard_texts:
     inlineStart = "⚡️ПЕРЕЙТИ К ЗАЯВКЕ⚡️"
     confirmRules = "Я принимаю"
@@ -158,6 +165,15 @@ class in_keyboard_texts:
     back = "◀️Назад"
     delete_link_confirm = "Да"
     admin_panel = "🔒АДМИН ПАНЕЛЬ🔒"
+    admin_stop_work = "🩸STOP WORK"
+    admin_send_all = "📨Отправить рассылку"
+    admin_users = "🤼Пользователи"
+    admin_services = "📦Сервисы"
+    admin_profits = "💰Профиты"
+    admin_requests = "📃Заявки"
+    admin_settings = "⚙️Настройки"
+    admin_countries = "🗺Страны"
+
     @staticmethod
     def country(flag, name):
         return flag+name+flag
@@ -194,6 +210,8 @@ class admin_texts:
     @staticmethod
     def confirmed_user(username, admin_username):
         return f"@{admin_username} успешно принял заявку от @{username}"
+
+    error_confirm_user = "Произошла ошибка при одобрении заявки."
 
     @staticmethod
     def not_confirmed_user(username, admin_username):

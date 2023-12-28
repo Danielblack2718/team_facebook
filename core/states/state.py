@@ -32,3 +32,6 @@ class ChangePrice(StatesGroup):
     id =  State()
     last_price = State()
 
+class SendAll(StatesGroup):
+    message = State()
+    text = State()

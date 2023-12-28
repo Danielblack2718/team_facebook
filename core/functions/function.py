@@ -35,25 +35,25 @@ class Admin:
             cursor.execute("SELECT COUNT(*) FROM requests WHERE status = 'error'")
             request_error_count = cursor.fetchone()[0]
 
-            cursor.execute("SELECT SUM(non_paid_amount) FROM non_paid_profits")
+            cursor.execute("SELECT SUM(amount) FROM profits WHERE status = 'decide'")
             sum_non_paid = cursor.fetchone()[0]
 
-            cursor.execute("SELECT SUM(paid_amount) FROM paid_profits")
+            cursor.execute("SELECT SUM(amount) FROM profits WHERE status = 'success'")
             sum_paid = cursor.fetchone()[0]
 
-            cursor.execute("SELECT percent FROM worker_percent WHERE id = 1")
-            percent = cursor.fetchone()[0]
+            cursor.execute("SELECT percent_worker FROM settings WHERE id = 1")
+            percent = cursor.fetchone()
 
             # Возвращаем массив с данными
             return {
-                "users_count": users_count,
-                "services_count": services_count,
-                "profits_count": profits_count,
-                "links_count": links_count,
-                "requests_count": requests_count,
-                "requests_wait_count": requests_wait_count,
-                "requests_accepted_count": requests_accepted_count,
-                "request_error_count": request_error_count,
+                "users": users_count,
+                "services": services_count,
+                "profits": profits_count,
+                "links": links_count,
+                "requests": requests_count,
+                "requests_wait": requests_wait_count,
+                "requests_accepted": requests_accepted_count,
+                "request_error": request_error_count,
                 "sum_non_paid": sum_non_paid,
                 "sum_paid": sum_paid,
                 "percent": percent
@@ -66,14 +66,17 @@ class User:
 
     @staticmethod
     def add_user(id, username, refferer):
-        connection = Database.connect_to_mysql()
-        cursor = connection.cursor()
-        if refferer == "0":
-            refferer = None
-        cursor.execute("INSERT INTO users (id, username, ref, supportChat, nickname) VALUES (%s, %s, %s, %s, %s)", (id, str(username), str(refferer), 1, str(username)))
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor()
+            if refferer == "0":
+                refferer = None
+            cursor.execute("INSERT INTO users (id, username, ref, supportChat, nickname) VALUES (%s, %s, %s, %s, %s)", (id, str(username), str(refferer), 1, str(username)))
 
-        Database.commit_and_close(connection)
-
+            Database.commit_and_close(connection)
+            return True
+        except:
+            return False
     @staticmethod
     def find_user(user_id):
         connection = Database.connect_to_mysql()
@@ -154,7 +157,7 @@ class User:
         except:
             return "error"
     @staticmethod
-    async def is_user_exists(user_id):
+    def is_user_exists(user_id):
         connection = Database.connect_to_mysql()
         cursor = connection.cursor()
         # Пример SQL-запроса для проверки наличия пользователя
@@ -168,6 +171,23 @@ class User:
 
         return bool(result)
 
+    @staticmethod
+    def get_all_users():
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        try:
+            # Выбираем всех пользователей из таблицы users
+            cursor.execute("SELECT * FROM users")
+            users = cursor.fetchall()
+
+            return users
+        except Exception as e:
+            # Обработка ошибок, например, логирование
+            print(f"Ошибка при получении пользователей: {e}")
+        finally:
+            # Всегда закрываем соединение
+            Database.commit_and_close(connection)
 class Country:
     @staticmethod
     def get_all_countries():
@@ -371,3 +391,29 @@ class Link:
 
         print(result)
         return result[0]
+
+class Request:
+    @staticmethod
+    def create_request(username, id, type, text = None):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        cursor.execute("INSERT INTO requests (type, textType, username, user_id, status) VALUES (%s, %s, %s, %s, %s)", (type, text, username, id, "wait"))
+
+        Database.commit_and_close(connection)
+
+    @staticmethod
+    def change_status(user_id, new_status):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        # Найдем последнюю запись с заданным user_id
+        cursor.execute("SELECT * FROM requests WHERE user_id = %s ORDER BY created_at DESC LIMIT 1", (user_id,))
+        latest_request = cursor.fetchone()
+
+        if latest_request:
+            # Изменяем статус
+            cursor.execute("UPDATE requests SET status = %s WHERE id = %s", (new_status, latest_request['id']))
+
+            # Завершаем транзакцию и закрываем соединение
+            Database.commit_and_close(connection)

@@ -20,6 +20,7 @@ class InKeyboards:
                                  callback_data="registration_stage_1_friends")
         ]
     ])
+
     @staticmethod
     def menu(admin):
 
@@ -275,3 +276,33 @@ class AdminInKeyboards:
                 InlineKeyboardButton(text=admin_texts.ban_new_user, callback_data=f"bannewuser#_{id}#_{username}")
             ]
         ])
+    back = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="admin")
+        ]
+    ])
+    admin_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.admin_stop_work, callback_data="stop_work")
+        ],
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.admin_send_all, callback_data="admin_send_all"),
+            InlineKeyboardButton(text=in_keyboard_texts.admin_users, callback_data="admin_users")
+        ],
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.admin_services, callback_data="admin_service"),
+            InlineKeyboardButton(text=in_keyboard_texts.admin_profits, callback_data="admin_profits")
+        ],
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.admin_requests, callback_data="admin_requests")
+        ],
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.admin_settings, callback_data="admin_settings")
+        ],
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.admin_countries, callback_data="admin_countries")
+        ],
+        [
+          InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="menu")
+        ]
+    ])
