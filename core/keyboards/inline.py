@@ -93,7 +93,7 @@ class InKeyboards:
             ]
         ])
     @staticmethod
-    def links(links_info):
+    def links(links_info, callback):
         # Создаем кнопки для стран
         print(links_info)
         links_buttons = [
@@ -106,7 +106,7 @@ class InKeyboards:
         rows = [links_buttons[i:i + 2] for i in range(0, len(links_buttons), 2)]
 
         rows.append([
-            InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),
+            InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data=callback),
             InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
         ])
         # Создаем клавиатуру
@@ -172,7 +172,7 @@ class InKeyboards:
 
     tools = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text=in_keyboard_texts.ad, callback_data="links"),
+            InlineKeyboardButton(text=in_keyboard_texts.ad, callback_data="links_"),
             InlineKeyboardButton(text=in_keyboard_texts.createLink, callback_data="create_link")
         ],
         [
@@ -287,7 +287,7 @@ class AdminInKeyboards:
         ],
         [
             InlineKeyboardButton(text=in_keyboard_texts.admin_send_all, callback_data="admin_send_all"),
-            InlineKeyboardButton(text=in_keyboard_texts.admin_users, callback_data="admin_users")
+            InlineKeyboardButton(text=in_keyboard_texts.admin_users, callback_data="admin_users_page_0")
         ],
         [
             InlineKeyboardButton(text=in_keyboard_texts.admin_services, callback_data="admin_service"),
@@ -306,3 +306,85 @@ class AdminInKeyboards:
           InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="menu")
         ]
     ])
+
+    @staticmethod
+    def admin_users(users, page, end_index):
+        print(users)
+        users_buttons = [
+            InlineKeyboardButton(text=user['username'], callback_data=f"user_{user['id']}")
+            for user in users
+        ]
+        # Добавляем кнопки "Menu" и "Tools" внизу
+
+        # Разбиваем кнопки по рядам (по две кнопки в каждом ряду)
+        rows = [users_buttons[i:i + 2] for i in range(0, len(users_buttons), 2)]
+
+        # Добавляем кнопки навигации, только если они не пустые
+        navigation_buttons = [
+            InlineKeyboardButton(text="⬅️ Назад", callback_data=f"admin_users_page_{page - 1}") if page > 0 else None,
+            InlineKeyboardButton(text=f"Страница {page + 1}", callback_data="empty"),
+            InlineKeyboardButton(text="➡️ Вперед", callback_data=f"admin_users_page_{page + 1}") if end_index < len(
+                users) else None
+        ]
+
+        # Убираем пустые кнопки
+        navigation_buttons = [button for button in navigation_buttons if button is not None]
+
+        if navigation_buttons:
+            rows.append(navigation_buttons)
+
+        rows.append([
+            InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="admin"),
+        ])
+
+        # Создаем клавиатуру
+        users_button = InlineKeyboardMarkup(inline_keyboard=rows)
+        return users_button
+
+    @staticmethod
+    def admin_user(user_id):
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.admin_profits, callback_data=f"profits_{user_id}")
+            ],
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.admin_links, callback_data=f"links_{user_id}")
+            ],
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.admin_make_mentor, callback_data=f"make_mentor_{user_id}")
+            ],
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.admin_user_block, callback_data=f"block_{user_id}")
+            ],
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.admin_change_status, callback_data=f"user_*change_*status_*{user_id}")
+            ],
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.admin_user_request, callback_data=f"requests_{user_id}")
+            ],
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="admin")
+            ]
+        ])
+
+    @staticmethod
+    def admin_countries(countries):
+        print(countries)
+        countries_buttons = [
+            InlineKeyboardButton(
+                text=in_keyboard_texts.servicesCountry(country['flag'], country['name']),
+                callback_data=f"create_link_country_{country['id']}") if country['active'] else None
+            for country in countries
+        ]
+        
+        # Разбиваем кнопки по рядам (по две кнопки в каждом ряду)
+        rows = [service_buttons[i:i + 2] for i in range(0, len(service_buttons), 2)]
+
+        rows.append([
+            InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),
+            InlineKeyboardButton(text=in_keyboard_texts.tools, callback_data="tools")
+        ])
+        # Создаем клавиатуру
+        services_country = InlineKeyboardMarkup(inline_keyboard=rows)
+
+        return services_country

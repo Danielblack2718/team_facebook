@@ -79,14 +79,30 @@ class User:
             return False
     @staticmethod
     def find_user(user_id):
+        print(user_id)
         connection = Database.connect_to_mysql()
         cursor = connection.cursor(dictionary=True)
         # Пример SQL-запроса для проверки наличия пользователя
         query = "SELECT * FROM users WHERE id = %s"
         cursor.execute(query, (user_id,))
 
+
         # Получение результата
         result = cursor.fetchone()
+
+        links = len(Link.get_links_in_user(user_id))
+        result['links_count'] = links
+
+        cursor.execute("SELECT COUNT(*), SUM(amount) FROM profits WHERE user_id = %s AND status = %s", (user_id, "success"))
+        profits_data = cursor.fetchone()
+
+        result['profits_count'] = profits_data['COUNT(*)'] if profits_data else 0
+        result['profits_sum'] = profits_data['SUM(amount)'] if profits_data else 0
+
+        cursor.execute("SELECT * FROM requests WHERE user_id = %s ORDER BY id DESC LIMIT 1", (user_id,))
+        latest_request = cursor.fetchone()
+        result['request_id'] = latest_request['id'] if latest_request else 0
+        result['request_status'] = latest_request['status'] if latest_request else 0
 
         Database.close_mysql_connection(connection)
 
@@ -190,11 +206,26 @@ class User:
             Database.commit_and_close(connection)
 class Country:
     @staticmethod
-    def get_all_countries():
+    def get_all_active_countries():
         connection = Database.connect_to_mysql()
         cursor = connection.cursor(dictionary=True)
 
         cursor.execute("SELECT * FROM countries WHERE active = %s", (True,))
+        result = cursor.fetchall()
+        if len(result) == 0:
+            Database.close_mysql_connection(connection)
+            print(False)
+            return False
+        print(result)
+        Database.close_mysql_connection(connection)
+        return result
+
+    @staticmethod
+    def get_all_countries():
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        cursor.execute("SELECT * FROM countries")
         result = cursor.fetchall()
         if len(result) == 0:
             Database.close_mysql_connection(connection)
@@ -361,7 +392,7 @@ class Link:
         result = cursor.fetchall()
         print(result)
         Database.close_mysql_connection(connection)
-
+        print(len(result))
         if len(result) == 0:
             return False
 

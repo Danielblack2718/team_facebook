@@ -105,30 +105,31 @@ class texts():
 Объявления удаляются 1 раз в 24 часа с момента создания!'''
 
     admin_error = "У вас нет доступа к админ панели."
+
     @staticmethod
-    def admin_menu(users, services, profits, links, requests, requestsWait, requestsAccepted, requestError, sumNonPaid, sumPaid, percent):
+    def admin_menu(data):
         return f'''🔐 Панель администратора
-    
-👥 Пользователей: {users}
-📦 Сервисов: {services}
-💰 Профитов: {profits}
-🗃 Объявлений: {links}
-📰 Заявок: {requests}
-⏳ Заявок на рассмотрении: {requestsWait}
-✅ Принятых заявок: {requestsAccepted}
-❌ Отклонённых заявок: {requestError}
 
-💸 Сумма невыплаченных профитов: {sumNonPaid} USD
-💳 Сумма выплаченных профитов: {sumPaid} USD
+👥 Пользователей: {data['users']}
+📦 Сервисов: {data['services']}
+💰 Профитов: {data['profits']}
+🗃 Объявлений: {data['links']}
+📰 Заявок: {data['requests']}
+⏳ Заявок на рассмотрении: {data['requests_wait']}
+✅ Принятых заявок: {data['requests_accepted']}
+❌ Отклонённых заявок: {data['request_error']}
 
-💴 Процент воркера с залёта: {percent}%'''
+💸 Сумма невыплаченных профитов: {data['sum_non_paid']} USD
+💳 Сумма выплаченных профитов: {data['sum_paid']} USD
+
+💴 Процент воркера с залёта: {data['percent']}%'''
+
 
     stop_work = "🩸STOP WORK"
-    @staticmethod
-    def stop_work_text(count):
-        return f"✅Текст отправлен {count} пользователям"
 
-    admin_send_all  = "Введите сообщение для рассылки:"
+    none_links_user = "У данного пользователя нет обьявлений!"
+
+    choose_country = "🌎 Выберите страну"
 class in_keyboard_texts:
     inlineStart = "⚡️ПЕРЕЙТИ К ЗАЯВКЕ⚡️"
     confirmRules = "Я принимаю"
@@ -173,6 +174,11 @@ class in_keyboard_texts:
     admin_requests = "📃Заявки"
     admin_settings = "⚙️Настройки"
     admin_countries = "🗺Страны"
+    admin_make_mentor = "Назначить наставником"
+    admin_user_block = "🔴Заблокировать"
+    admin_change_status = "🚦Изменить статус"
+    admin_user_request = "📰Заявка"
+    admin_links = "📦Обьявления"
 
     @staticmethod
     def country(flag, name):
@@ -194,9 +200,32 @@ class start_texts:
     friendWaitText = "Введите юзернейм вашего друга, который вас пригласил. Он получит 6% с вашего первого профита.\n\nПример: @OviumBot"
 
 class admin_texts:
+    @staticmethod
+    def admin_user_profile(user):
+        print(user)
+        return f'''
+    👤 Пользователь: @{user['username']}
 
+🆔 ID: {user['id']}
 
+💰 Профитов: {user['profits_count']}
+💸 Сумма профитов: {user['profits_count']} USD.
+📦 Объявлений: {user['links_count']}
+🚦 Статус: {user['status']}
+📃 Присоединился: {user['added']}
 
+📰 Заявка: 
+— ID: {user['request_id']}
+— Статус: {user['request_status']}'''
+    @staticmethod
+    def stop_work_text(count):
+        return f"✅Текст отправлен {count} пользователям"
+
+    admin_send_all = "Введите сообщение для рассылки:"
+
+    @staticmethod
+    def admin_users(count):
+        return f"👥 Список пользователей (Всего: {count})"
     @staticmethod
     def new_user_text(username, identification, friend = None):
         friend_text = ""

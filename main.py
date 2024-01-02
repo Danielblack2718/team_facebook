@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO)
 async def command_start(message: types.Message):
     user_id = message.from_user.id
     user = User.find_user(message.from_user.id)
-    if await User.is_user_exists(user_id):
+    if User.is_user_exists(user_id):
         photo = FSInputFile(path=paths.menu)
         # Пользователь есть в базе, отправляем главное меню
         await bot.send_photo(
@@ -248,7 +248,7 @@ async def change_smartsupp_confirm(message: types.Message, state: FSMContext):
 
 @dp.callback_query(F.data == "create_link")
 async def create_link(callback: types.CallbackQuery, state: FSMContext):
-    countries = Country.get_all_countries()
+    countries = Country.get_all_active_countries()
     await state.clear()
     print(countries)
     if countries != False:
@@ -441,14 +441,29 @@ async def delete_link(callback: types.CallbackQuery):
         caption=texts.delete_link_confirm(link['name']),
         reply_markup=InKeyboards.menu_and_tools
     )
-@dp.callback_query(F.data == "links")
+
+@dp.callback_query(F.data.startswith("admin_countries"))
+async def admin_countries(callback: types.CallbackQuery):
+    countries = Country.get_all_countries()
+    await callback.message.edit_caption(
+        caption=texts.choose_country,
+        reply_markup=AdminInKeyboards.admin_countries(countries)
+    )
+
+@dp.callback_query(F.data.startswith("links_"))
 async def links_info(callback: types.CallbackQuery):
-    links = Link.get_links_in_user(callback.from_user.id)
+    data = callback.data.split('_')
+    id = callback.from_user.id
+    callback_text = "menu"
+    if len(data) > 1:
+        callback_text = "admin"
+        id = data[1]
+    links = Link.get_links_in_user(id)
     print(links)
     count = len(links)
     await callback.message.edit_caption(
         caption=texts.links(count),
-        reply_markup=InKeyboards.links(links)
+        reply_markup=InKeyboards.links(links, callback_text)
     )
 
 @dp.callback_query(F.data.startswith("link_"))
@@ -569,7 +584,7 @@ async def channels(callback: types.CallbackQuery):
 @dp.callback_query(F.data == "admin_send_all")
 async def admin_send_all(callback: types.CallbackQuery,state:FSMContext):
     await callback.message.edit_caption(
-        caption=texts.admin_send_all,
+        caption=admin_texts.admin_send_all,
         reply_markup=AdminInKeyboards.back
     )
     await state.set_state(SendAll.message)
@@ -581,17 +596,46 @@ async def send_all_text(message: types.Message, state: FSMContext):
     data = await state.update_data(text=message.text)
     await state.clear()
     users = User.get_all_users()
+    admin_menu = Admin.get_admin_menu()
     for user in users:
         await bot.send_message(
             chat_id=user['id'],
             text=message.text
         )
-    message = await bot.send_message(
-        chat_id=message.from_user.id,
-        text=texts.stop_work_text(len(users))
+    await bot.edit_message_caption(
+        caption=texts.admin_menu(admin_menu),
+        chat_id=message.chat.id,
+        message_id=data['message'],
+        reply_markup=AdminInKeyboards.admin_keyboard
     )
-    await asyncio.sleep(10)
+
+    message_send = await bot.send_message(
+        chat_id=message.from_user.id,
+        text=admin_texts.stop_work_text(len(users))
+    )
     await message.delete()
+    await asyncio.sleep(10)
+    await message_send.delete()
+
+@dp.callback_query(F.data.startswith("admin_users_page_"))
+async def admin_users(callback: types.CallbackQuery):
+    page = int(callback.data.split("_")[-1])  # Извлекаем номер страницы из данных коллбэка
+    print(page)
+    items_per_page = 10  # Количество пользователей на одной странице
+    users = User.get_all_users()
+    print(users[1])
+
+    start_index = page * items_per_page
+    end_index = (page + 1) * items_per_page
+    current_users = users[start_index:end_index]
+    print(current_users)
+
+    # Редактируем сообщение с клавиатурой
+    await callback.message.edit_caption(
+        caption=admin_texts.admin_users(len(users)),
+        reply_markup=AdminInKeyboards.admin_users(current_users, page,end_index)
+    )
+
 
 @dp.callback_query(F.data == "stop_work")
 async def stop_work(callback:types.CallbackQuery):
@@ -607,33 +651,32 @@ async def stop_work(callback:types.CallbackQuery):
     )
     await asyncio.sleep(10)
     await message.delete()
+
+@dp.callback_query(F.data.startswith("user_"))
+async def user_profile(callback: types.CallbackQuery):
+    data = callback.data.split('_')[1]
+    user = User.find_user(int(data))
+    await callback.message.edit_caption(
+        caption=admin_texts.admin_user_profile(user),
+        reply_markup=AdminInKeyboards.admin_user(user['id'])
+    )
+
+
 @dp.message(F.text, Command("admin"))
 async def admin(message: types.Message):
     user = User.find_user(message.from_user.id)
     admin_menu = Admin.get_admin_menu()
     if not user['admin']:
-        await callback.message.edit_caption(
-            caption=texts.admin_error,
-            reply_markup=InKeyboards.menu(False)
+        await bot.send_message(
+            chat_id=message.chat.id,
+            text=texts.admin_error,
         )
         return
     photo = FSInputFile(path=paths.menu)
     await  bot.send_photo(
         chat_id=message.chat.id,
         photo=photo,
-        caption=texts.admin_menu(
-            admin_menu['users'],
-            admin_menu['services'],
-            admin_menu['profits'],
-            admin_menu['links'],
-            admin_menu['requests'],
-            admin_menu['requests_wait'],
-            admin_menu['requests_accepted'],
-            admin_menu['request_error'],
-            admin_menu['sum_non_paid'],
-            admin_menu['sum_paid'],
-            admin_menu['percent']
-        ),
+        caption=texts.admin_menu(admin_menu),
         reply_markup=AdminInKeyboards.admin_keyboard
     )
 @dp.callback_query(F.data == "admin")
@@ -647,19 +690,7 @@ async def admin(callback: types.CallbackQuery):
         )
         return
     await callback.message.edit_caption(
-        caption=texts.admin_menu(
-            admin_menu['users'],
-            admin_menu['services'],
-            admin_menu['profits'],
-            admin_menu['links'],
-            admin_menu['requests'],
-            admin_menu['requests_wait'],
-            admin_menu['requests_accepted'],
-            admin_menu['request_error'],
-            admin_menu['sum_non_paid'],
-            admin_menu['sum_paid'],
-            admin_menu['percent']
-        ),
+        caption=texts.admin_menu(admin_menu),
         reply_markup=AdminInKeyboards.admin_keyboard
     )
 
