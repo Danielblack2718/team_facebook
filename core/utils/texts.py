@@ -130,6 +130,7 @@ class texts():
     none_links_user = "У данного пользователя нет обьявлений!"
 
     choose_country = "🌎 Выберите страну"
+
 class in_keyboard_texts:
     inlineStart = "⚡️ПЕРЕЙТИ К ЗАЯВКЕ⚡️"
     confirmRules = "Я принимаю"

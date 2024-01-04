@@ -373,12 +373,18 @@ class AdminInKeyboards:
         countries_buttons = [
             InlineKeyboardButton(
                 text=in_keyboard_texts.servicesCountry(country['flag'], country['name']),
-                callback_data=f"create_link_country_{country['id']}") if country['active'] else None
+                callback_data=f"country_{country['id']}") if country['active'] else None
             for country in countries
         ]
-        
+
+        countries_buttons = [button for button in countries_buttons if button is not None]
+
         # Разбиваем кнопки по рядам (по две кнопки в каждом ряду)
-        rows = [service_buttons[i:i + 2] for i in range(0, len(service_buttons), 2)]
+        rows = [countries_buttons[i:i + 2] for i in range(0, len(countries_buttons), 2)]
+
+
+
+
 
         rows.append([
             InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),

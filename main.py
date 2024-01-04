@@ -274,6 +274,18 @@ async def create_link(callback: types.CallbackQuery, state: FSMContext):
             reply_markup=InKeyboards.error_get_countries
         )
 
+@dp.callback_query(F.data.startswith('country_'))
+async def country_edit(callback: types.CallbackQuery, state: FSMContext):
+    id = callback.data.split('_')[1]
+    country = Country.find_country(id)
+    await callback.message.edit_caption(
+        caption=in_keyboard_texts.servicesCountry(country['flag'], country['name']),
+        reply_markup=texts.
+    )
+
+
+
+
 
 @dp.callback_query(F.data.startswith("create_link_country_"))
 async def create_link_country(callback: types.CallbackQuery):

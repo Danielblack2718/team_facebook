@@ -235,6 +235,20 @@ class Country:
         Database.close_mysql_connection(connection)
         return result
 
+    @staticmethod
+    def find_country(id):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        cursor.execute("SELECT * FROM countries WHERE id = %s", (id,))
+        result = cursor.fetchall()
+        if len(result) == 0:
+            Database.close_mysql_connection(connection)
+            print(False)
+            return False
+        print(result)
+        Database.close_mysql_connection(connection)
+        return result
 class Service:
     @staticmethod
     def get_services_in_country(country):
