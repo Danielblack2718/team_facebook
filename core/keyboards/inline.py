@@ -1,5 +1,5 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from core.utils.texts import start_texts, texts, admin_texts, in_keyboard_texts
+from core.utils.texts import start_texts, texts, admin_texts, in_keyboard_texts, log
 from core.utils.config import CHANNELS
 
 
@@ -267,16 +267,36 @@ class InKeyboards:
 
 class AdminInKeyboards:
     @staticmethod
-    def new_user_keyboard(id, username, message_id, refferer="0"):
+    def new_user_keyboard(id, username, message_id,oldRequest, refferer="0"):
         print(id, username, message_id, sep='--------\n')
-        return InlineKeyboardMarkup(inline_keyboard=[
-            [
+        keyboard = [[
                 InlineKeyboardButton(text=admin_texts.add_new_user,
                                      callback_data=f"addnewuser#_{id}#_{username}#_{message_id}#_{refferer}"),
                 InlineKeyboardButton(text=admin_texts.ban_new_user, callback_data=f"bannewuser#_{id}#_{username}")
-            ]
-        ])
+            ]]
+        if oldRequest:
+            keyboard.append(
+                [
+                    InlineKeyboardButton(
+                        text=in_keyboard_texts.back,
+                        callback_data="admin"
+                    )
+                ]
+            )
+        kb = InlineKeyboardMarkup(inline_keyboard=keyboard)
+        return kb
     back = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="admin_text")
+        ]
+    ])
+    admin_settings = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=admin_texts.change_percent, callback_data="change_percent_worker")
+        ],
+        [
+            InlineKeyboardButton(text=admin_texts.change_all_domain, callback_data="change_all_domain")
+        ],
         [
             InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="admin")
         ]
@@ -290,11 +310,11 @@ class AdminInKeyboards:
             InlineKeyboardButton(text=in_keyboard_texts.admin_users, callback_data="admin_users_page_0")
         ],
         [
-            InlineKeyboardButton(text=in_keyboard_texts.admin_services, callback_data="admin_service"),
-            InlineKeyboardButton(text=in_keyboard_texts.admin_profits, callback_data="admin_profits")
+            InlineKeyboardButton(text=in_keyboard_texts.admin_services, callback_data="admin_services_page_0"),
+            InlineKeyboardButton(text=in_keyboard_texts.admin_profits, callback_data="admin_profits_page_0")
         ],
         [
-            InlineKeyboardButton(text=in_keyboard_texts.admin_requests, callback_data="admin_requests")
+            InlineKeyboardButton(text=in_keyboard_texts.admin_requests, callback_data="admin_request_page_0")
         ],
         [
             InlineKeyboardButton(text=in_keyboard_texts.admin_settings, callback_data="admin_settings")
@@ -306,6 +326,105 @@ class AdminInKeyboards:
           InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="menu")
         ]
     ])
+    @staticmethod
+    def services(services, end_index, page):
+        # Добавляем кнопки "Menu" и "Tools" внизу
+        services_buttons = [
+            InlineKeyboardButton(
+                text=("🟢 " if service['active'] else "🔴 ") + str(service['name'])+" "+ service['country'], callback_data=f"service_{service['id']}")
+            for service in services
+        ]
+
+        # Разбиваем кнопки по рядам (по две кнопки в каждом ряду)
+        rows = [services_buttons[i:i + 2] for i in range(0, len(services_buttons), 2)]
+
+        # Добавляем кнопки навигации, только если они не пустые
+        navigation_buttons = [
+            InlineKeyboardButton(text="⬅️ Назад",
+                                 callback_data=f"admin_services_page_{page - 1}") if page > 0 else None,
+            InlineKeyboardButton(text=f"Страница {page + 1}", callback_data="empty"),
+            InlineKeyboardButton(text="➡️ Вперед",
+                                 callback_data=f"admin_services_page_{page + 1}") if end_index < len(
+                services) else None
+        ]
+
+        # Убираем пустые кнопки
+        navigation_buttons = [button for button in navigation_buttons if button is not None]
+
+        if navigation_buttons:
+            rows.append(navigation_buttons)
+
+        rows.append([
+            InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="admin"),
+        ])
+
+        # Создаем клавиатуру
+        users_button = InlineKeyboardMarkup(inline_keyboard=rows)
+        return users_button
+
+    @staticmethod
+    def profits(page, end_index, profits, userid = None):
+        # Добавляем кнопки "Menu" и "Tools" внизу
+        profits_buttons = [
+            InlineKeyboardButton(text=("🟢 " if profit['status'] == "success" else "🔴 ")+str(profit['id'])+" ("+str(profit['amount'])+"$)", callback_data=f"profit_{profit['id']}")
+            for profit in profits
+        ]
+
+        # Разбиваем кнопки по рядам (по две кнопки в каждом ряду)
+        rows = [profits_buttons[i:i + 2] for i in range(0, len(profits_buttons), 2)]
+
+        # Добавляем кнопки навигации, только если они не пустые
+        navigation_buttons = [
+            InlineKeyboardButton(text="⬅️ Назад", callback_data=f"admin_profits_page_{page - 1}_"+userid if userid else "") if page > 0 else None,
+            InlineKeyboardButton(text=f"Страница {page + 1}", callback_data="empty"),
+            InlineKeyboardButton(text="➡️ Вперед", callback_data=f"admin_profits_page_{page + 1}_"+userid if userid else "") if end_index < len(profits) else None
+        ]
+
+        # Убираем пустые кнопки
+        navigation_buttons = [button for button in navigation_buttons if button is not None]
+
+        if navigation_buttons:
+            rows.append(navigation_buttons)
+
+        rows.append([
+            InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="admin"),
+        ])
+
+        # Создаем клавиатуру
+        users_button = InlineKeyboardMarkup(inline_keyboard=rows)
+        return users_button
+
+    @staticmethod
+    def admin_requests(requests, page, end_index):
+        request_buttons = [
+            InlineKeyboardButton(text=("✅ " if request['status'] == "accepted" else ("⏳ " if request['status'] == "wait" else "❌ "))+str(request['id']), callback_data=f"request_{request['id']}")
+            for request in requests
+        ]
+        # Добавляем кнопки "Menu" и "Tools" внизу
+
+        # Разбиваем кнопки по рядам (по две кнопки в каждом ряду)
+        rows = [request_buttons[i:i + 2] for i in range(0, len(request_buttons), 2)]
+
+        # Добавляем кнопки навигации, только если они не пустые
+        navigation_buttons = [
+            InlineKeyboardButton(text="⬅️ Назад", callback_data=f"admin_request_page_{page - 1}") if page > 0 else None,
+            InlineKeyboardButton(text=f"Страница {page + 1}", callback_data="empty"),
+            InlineKeyboardButton(text="➡️ Вперед", callback_data=f"admin_request_page_{page + 1}") if end_index < len(requests) else None
+        ]
+
+        # Убираем пустые кнопки
+        navigation_buttons = [button for button in navigation_buttons if button is not None]
+
+        if navigation_buttons:
+            rows.append(navigation_buttons)
+
+        rows.append([
+            InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="admin_text"),
+        ])
+
+        # Создаем клавиатуру
+        users_button = InlineKeyboardMarkup(inline_keyboard=rows)
+        return users_button
 
     @staticmethod
     def admin_users(users, page, end_index):
@@ -342,25 +461,25 @@ class AdminInKeyboards:
         return users_button
 
     @staticmethod
-    def admin_user(user_id):
+    def admin_user(user_id, mentor):
         return InlineKeyboardMarkup(inline_keyboard=[
             [
-                InlineKeyboardButton(text=in_keyboard_texts.admin_profits, callback_data=f"profits_{user_id}")
+                InlineKeyboardButton(text=in_keyboard_texts.admin_profits, callback_data=f"admin_profits_page_0_{user_id}")
             ],
             [
                 InlineKeyboardButton(text=in_keyboard_texts.admin_links, callback_data=f"links_{user_id}")
             ],
             [
-                InlineKeyboardButton(text=in_keyboard_texts.admin_make_mentor, callback_data=f"make_mentor_{user_id}")
+                InlineKeyboardButton(text=in_keyboard_texts.admin_make_mentor(mentor), callback_data=f"make_mentor_{user_id}")
             ],
             [
                 InlineKeyboardButton(text=in_keyboard_texts.admin_user_block, callback_data=f"block_{user_id}")
             ],
             [
-                InlineKeyboardButton(text=in_keyboard_texts.admin_change_status, callback_data=f"user_*change_*status_*{user_id}")
+                InlineKeyboardButton(text=in_keyboard_texts.admin_change_status, callback_data=f"status*_{user_id}")
             ],
             [
-                InlineKeyboardButton(text=in_keyboard_texts.admin_user_request, callback_data=f"requests_{user_id}")
+                InlineKeyboardButton(text=in_keyboard_texts.admin_user_request, callback_data=f"request_user_{user_id}")
             ],
             [
                 InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="admin")
@@ -368,23 +487,52 @@ class AdminInKeyboards:
         ])
 
     @staticmethod
+    def admin_country(country, count):
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.country_active(country['active']), callback_data=f"on_country_off_{country['id']}")
+            ],
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="admin")
+            ]
+        ])
+
+    menu = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="admin")
+        ]
+    ])
+    @staticmethod
+    def back(callback):
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.back, callback_data=callback)
+            ]
+        ])
+    @staticmethod
+    def service(service_id, active):
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text=admin_texts.change_subdomain, callback_data=f"change_domain_service_{service_id}")
+            ],
+            [
+                InlineKeyboardButton(text=admin_texts.hide_service(active), callback_data=f"hide_service_{service_id}")
+            ],
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.back, callback_data="admin_services_page_0")
+            ]
+        ])
+    @staticmethod
     def admin_countries(countries):
         print(countries)
         countries_buttons = [
             InlineKeyboardButton(
-                text=in_keyboard_texts.servicesCountry(country['flag'], country['name']),
-                callback_data=f"country_{country['id']}") if country['active'] else None
+                text=in_keyboard_texts.AdminServicesCountry(country['flag'], country['name'], country['active']),
+                callback_data=f"country_{country['id']}")
             for country in countries
         ]
-
-        countries_buttons = [button for button in countries_buttons if button is not None]
-
         # Разбиваем кнопки по рядам (по две кнопки в каждом ряду)
         rows = [countries_buttons[i:i + 2] for i in range(0, len(countries_buttons), 2)]
-
-
-
-
 
         rows.append([
             InlineKeyboardButton(text=in_keyboard_texts.menu, callback_data="menu"),

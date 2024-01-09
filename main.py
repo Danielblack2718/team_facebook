@@ -8,10 +8,10 @@ from aiogram.types import FSInputFile, InputMediaPhoto
 
 from core.keyboards.inline import InKeyboards, AdminInKeyboards
 from core.utils.config import TOKEN, ADMIN_CHANNEL_ID
-from core.utils.texts import texts, start_texts, admin_texts, in_keyboard_texts
+from core.utils.texts import texts, start_texts, admin_texts, in_keyboard_texts, log
 from core.utils.paths import paths
-from core.functions.function import Admin, User, Country, Service, Link, Request
-from core.states.state import FriendTextWait, ChangeNickname, ChangeSmartSupp, CreateLink, ChangePrice,SendAll
+from core.functions.function import Admin, User, Country, Service, Link, Request, Profits, Settings
+from core.states.state import FriendTextWait, ChangeNickname, ChangeSmartSupp, CreateLink, ChangePrice,SendAll, ChangeSubDomain,  ChangePercent, ChangeDomain
 
 Form_router = Router()
 Bot_router = Router()
@@ -24,8 +24,8 @@ logging.basicConfig(level=logging.INFO)
 @dp.message(CommandStart())
 async def command_start(message: types.Message):
     user_id = message.from_user.id
-    user = User.find_user(message.from_user.id)
     if User.is_user_exists(user_id):
+        user = User.find_user(message.from_user.id)
         photo = FSInputFile(path=paths.menu)
         # Пользователь есть в базе, отправляем главное меню
         await bot.send_photo(
@@ -49,6 +49,8 @@ async def command_start(message: types.Message):
                 callback="start"
             )
         )
+
+
 
 @dp.callback_query(F.data == 'start')
 async def confirm_rules(callback: types.CallbackQuery, state: FSMContext):
@@ -74,7 +76,7 @@ async def identification(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data.startswith('registration_stage_1_advert'))
 async def register_stage_1(callback: types.CallbackQuery, state: FSMContext):
     main_message = await callback.message.edit_caption(caption=start_texts.waitText)
-    Request.create_request(callback.from_user.username, callback.from_user.id, "Реклама")
+    Request.create_request(callback.from_user.username, callback.from_user.id, "Реклама", callback.message.message_id)
     await bot.send_message(
         text=admin_texts.new_user_text(
             callback.from_user.username,
@@ -84,7 +86,8 @@ async def register_stage_1(callback: types.CallbackQuery, state: FSMContext):
         reply_markup=AdminInKeyboards.new_user_keyboard(
             callback.from_user.id,
             callback.from_user.username,
-            main_message.message_id
+            main_message.message_id,
+            False
         )
     )
 
@@ -110,7 +113,7 @@ async def friend_text_wait(message: types.Message, state: FSMContext):
         chat_id=message.chat.id,
         caption=start_texts.waitText
     )
-    Request.create_request(message.from_user.username, message.from_user.id, "Друг", text=message.text)
+    Request.create_request(message.from_user.username, message.from_user.id, "Друг", text=message.text, message_id=message.message_id)
     await bot.delete_message(
         message_id=message.message_id,
         chat_id=message.chat.id
@@ -126,6 +129,7 @@ async def friend_text_wait(message: types.Message, state: FSMContext):
             message.from_user.id,
             message.from_user.username,
             main_message.message_id,
+        False,
             message.text
         )
     )
@@ -133,6 +137,7 @@ async def friend_text_wait(message: types.Message, state: FSMContext):
 @dp.callback_query(F.data.startswith('addnewuser#_'))
 async def register_stage_1(callback: types.CallbackQuery, state: FSMContext):
     data = callback.data.split('#_')
+    print(data)
     chat_id = data[1]
     username = data[2]
     message_id = data[3]
@@ -162,6 +167,7 @@ async def register_stage_1(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "profile")
 async def profile(callback: types.CallbackQuery):
     user = User.find_user(callback.from_user.id)
+    profits = Profits.get_profits_in_user(user_id=user['id'])
     media = InputMediaPhoto(
         media=FSInputFile(
             path=paths.profile
@@ -170,8 +176,9 @@ async def profile(callback: types.CallbackQuery):
             user['id'],
             user['hide'],
             user['supportChat'],
-            0,
-            0
+            sum(item['amount'] for item in profits),
+            len(profits),
+            False
         ),
         parse_mode="MARKDOWN")
     await bot.edit_message_media(
@@ -179,6 +186,7 @@ async def profile(callback: types.CallbackQuery):
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         reply_markup=InKeyboards.profile,
+
     )
 
 @dp.callback_query(F.data.startswith("nickname"))
@@ -214,7 +222,7 @@ async def change_smartsupp(callback: types.CallbackQuery, state: FSMContext):
         api = user['supportChatApi']
     message = await callback.message.edit_caption(
         caption=texts.new_smartsupp,
-        reply_markup=InKeyboards.one_button("Оставить @" + api, "smartsupp"),
+        reply_markup=InKeyboards.one_button("Оставить \"" + api+"\"", "smartsupp"),
         parse_mode="MARKDOWN"
     )
     await state.set_state(ChangeSmartSupp.message)
@@ -277,15 +285,59 @@ async def create_link(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data.startswith('country_'))
 async def country_edit(callback: types.CallbackQuery, state: FSMContext):
     id = callback.data.split('_')[1]
-    country = Country.find_country(id)
+    country = Country.find_country(id)[0]
+    print(country)
+    count = len(Service.get_services_in_country(int(country['id'])))
     await callback.message.edit_caption(
         caption=in_keyboard_texts.servicesCountry(country['flag'], country['name']),
-        reply_markup=texts.
+        reply_markup=AdminInKeyboards.admin_country(country, count)
     )
 
+@dp.callback_query(F.data.startswith('on_country_off_'))
+async def countryOnOff(callback: types.CallbackQuery):
+    id = callback.data.split('_')[3]
+    Country.change_active(id)
+    country = Country.find_country(id)[0]
+    print('----------------------')
+    print(country)
+    count = len(Service.get_services_in_country(country['id']))
 
-
-
+    await callback.message.edit_reply_markup(
+        reply_markup=AdminInKeyboards.admin_country(country, count)
+    )
+@dp.callback_query(F.data.startswith('request_'))
+async def request(callback: types.CallbackQuery):
+    data = callback.data.split('_')
+    if data[1] == "user":
+        request = Request.find_request_at_user(data[2])
+    else:
+        request = Request.find_request(data[1])[0]
+    if request:
+        if request['status'] != "wait":
+            await callback.message.edit_caption(
+                caption=admin_texts.request(request),
+                reply_markup=AdminInKeyboards.menu
+            )
+        else:
+            await callback.message.edit_caption(
+                caption=admin_texts.request(request),
+                reply_markup=AdminInKeyboards.new_user_keyboard(request['user_id'], request['username'], request['message_id'],True, request['textType'])
+            )
+@dp.callback_query(F.data.startswith("admin_request_page_"))
+async def requests(callback: types.CallbackQuery):
+    data = callback.data.split('_')
+    page = int(data[3])
+    items_per_page = 10
+    start_index = page * items_per_page
+    end_index = (page + 1) * items_per_page
+    requests = Request.get_all_requests()
+    currentRequests = requests[start_index:end_index]
+    await bot.send_message(
+        chat_id=callback.message.chat.id,
+        reply_markup=AdminInKeyboards.admin_requests(currentRequests, page, end_index),
+        text=admin_texts.requests(len(requests))
+    )
+    await callback.message.delete()
 
 @dp.callback_query(F.data.startswith("create_link_country_"))
 async def create_link_country(callback: types.CallbackQuery):
@@ -368,18 +420,21 @@ async def create_link_author(message: types.Message, state:FSMContext):
         reply_markup=InKeyboards.skip
     )
 
+
+
 @Bot_router.message(CreateLink.photo)
 async def create_link_author(message: types.Message, state:FSMContext):
-    data = await state.update_data(photo=message.text)
+    data = await state.update_data(photo=None)
 
-    await state.set_state(CreateLink.number)
-    await bot.delete_message(message_id=message.message_id, chat_id=message.chat.id)
-    await bot.edit_message_caption(
-        chat_id=message.chat.id,
-        message_id=data['message'],
-        caption=texts.link_number,
-        reply_markup=InKeyboards.cancel
-    )
+    if message.photo is None:
+        await state.set_state(CreateLink.photo)
+        await bot.delete_message(message_id=message.message_id, chat_id=message.chat.id)
+    else:
+        data = await state.update_data(photo=message.photo[-1])
+        photo = message.photo[-1]
+        photo_file = await photo.download()
+        print(photo_file)
+        print(data['photo'])
 
 @dp.callback_query(F.data == "skip_photo_create_link")
 async def skip_photo_create_link(callback: types.CallbackQuery, state:FSMContext):
@@ -468,7 +523,7 @@ async def links_info(callback: types.CallbackQuery):
     id = callback.from_user.id
     callback_text = "menu"
     if len(data) > 1:
-        callback_text = "admin"
+        callback_text = f"user_{data[1]}"
         id = data[1]
     links = Link.get_links_in_user(id)
     print(links)
@@ -635,7 +690,6 @@ async def admin_users(callback: types.CallbackQuery):
     print(page)
     items_per_page = 10  # Количество пользователей на одной странице
     users = User.get_all_users()
-    print(users[1])
 
     start_index = page * items_per_page
     end_index = (page + 1) * items_per_page
@@ -648,6 +702,40 @@ async def admin_users(callback: types.CallbackQuery):
         reply_markup=AdminInKeyboards.admin_users(current_users, page,end_index)
     )
 
+
+@dp.callback_query(F.data.startswith('admin_profits_page_'))
+async def profits(callback: types.CallbackQuery):
+    data = callback.data.split('_')
+    page = int(data[3])
+    items_per_page = 10
+    start_index = page * items_per_page
+    end_index = (page + 1) * items_per_page
+    print(data)
+    print(len(data))
+    if len(data) > 4:
+        user = User.find_user(data[4])
+        profits = Profits.get_profits_in_user(data[4])
+        if len(profits) == 0:
+            await callback.answer(
+                text=admin_texts.none_profits
+            )
+            return
+        currentProfits = profits[start_index:end_index]
+        await callback.message.edit_caption(
+            caption=admin_texts.profits(user['username']),
+            reply_markup=AdminInKeyboards.profits(page, end_index, currentProfits, user['id'])
+        )
+    profits = Profits.get_all_profits()
+    if len(profits) == 0:
+        await callback.answer(
+            text=admin_texts.none_profits
+        )
+        return
+    currentProfits = profits[start_index:end_index]
+    await callback.message.edit_caption(
+        caption=admin_texts.profits(),
+        reply_markup=AdminInKeyboards.profits(page, end_index, currentProfits)
+    )
 
 @dp.callback_query(F.data == "stop_work")
 async def stop_work(callback:types.CallbackQuery):
@@ -666,12 +754,42 @@ async def stop_work(callback:types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("user_"))
 async def user_profile(callback: types.CallbackQuery):
+    print(callback.data)
     data = callback.data.split('_')[1]
     user = User.find_user(int(data))
     await callback.message.edit_caption(
         caption=admin_texts.admin_user_profile(user),
-        reply_markup=AdminInKeyboards.admin_user(user['id'])
+        reply_markup=AdminInKeyboards.admin_user(user['id'], user['mentor'])
     )
+
+@dp.message(F.text, Command("me"))
+async def me(message: types.Message):
+    user = User.find_user(message.from_user.id)
+    profits = Profits.get_profits_in_user(user_id=user['id'])
+    await bot.send_message(
+        chat_id=message.chat.id,
+        text=texts.profile(
+            user['id'],
+            user['hide'],
+            user['supportChat'],
+            sum(item['amount'] for item in profits),
+            len(profits), True),
+        parse_mode="MARKDOWN"
+    )
+
+@dp.callback_query(F.data.startswith("make_mentor_"))
+async def make_mentor(callback:types.CallbackQuery):
+    print(callback.data)
+    data = callback.data.split('_')[2]
+    User.change_mentor(data)
+    user = User.find_user(data)
+
+    if user:
+        await callback.message.edit_caption(
+            caption=admin_texts.admin_user_profile(user),
+            reply_markup=AdminInKeyboards.admin_user(user['id'], user['mentor'])
+        )
+
 
 
 @dp.message(F.text, Command("admin"))
@@ -696,6 +814,12 @@ async def admin(callback: types.CallbackQuery):
     user = User.find_user(callback.from_user.id)
     admin_menu = Admin.get_admin_menu()
     if not user['admin']:
+        await bot.send_message(
+            chat_id=callback.message.chat.id,
+            text=texts.admin_error,
+            reply_markup=InKeyboards.menu(False)
+        )
+
         await callback.message.edit_caption(
             caption=texts.admin_error,
             reply_markup=InKeyboards.menu(False)
@@ -705,6 +829,176 @@ async def admin(callback: types.CallbackQuery):
         caption=texts.admin_menu(admin_menu),
         reply_markup=AdminInKeyboards.admin_keyboard
     )
+
+@dp.callback_query(F.data.startswith("admin_services_page_"))
+async def services(callback:types.CallbackQuery):
+    data = callback.data.split('_')
+    services = Service.get_all_services()
+    page = int(data[3])
+    items_per_page = 10
+    start_index = page * items_per_page
+    end_index = (page + 1) * items_per_page
+    currentServices = services[start_index:end_index]
+    await callback.message.edit_caption(
+        caption=admin_texts.select_service,
+        reply_markup=AdminInKeyboards.services(currentServices, end_index, page)
+    )
+
+@dp.callback_query(F.data.startswith('change_domain_service_'))
+async def change_domain_service(callback: types.CallbackQuery,state: FSMContext):
+    data = callback.data.split('_')[3]
+    await state.set_state(ChangeSubDomain.message)
+    await state.update_data(message=callback.message.message_id)
+    await state.set_state(ChangeSubDomain.service)
+    await state.update_data(service=data)
+    await state.set_state(ChangeSubDomain.text)
+    await callback.message.edit_caption(
+        caption=admin_texts.change_subdomain,
+        reply_markup=AdminInKeyboards.back(f'service_{data}')
+    )
+
+
+@Bot_router.message(ChangeSubDomain.text)
+async def change_domain_enter(message: types.Message, state: FSMContext):
+    data = await state.update_data(text=message.text)
+    service = Service.change_subdomain(data['service'],message.text)
+    await state.clear()
+    if service:
+        await bot.edit_message_caption(
+            caption=admin_texts.success_change_subdomain(message.text),
+            chat_id=message.chat.id,
+            message_id=data['message'],
+            reply_markup=AdminInKeyboards.back(f'service_{data["service"]}')
+        )
+        await message.delete()
+    else:
+        await bot.edit_message_caption(
+            caption=admin_texts.error_change_domain,
+            reply_markup=AdminInKeyboards.back(f'service_{data["service"]}'),
+            chat_id=message.chat.id,
+            message_id=data['message']
+        )
+        await message.delete()
+
+@dp.callback_query(F.data == "admin_settings")
+async def admin_settings(callback:types.CallbackQuery):
+    settings = Settings.get_settings()[0]
+    await callback.message.edit_caption(
+        caption=admin_texts.settings(settings),
+        reply_markup=AdminInKeyboards.admin_settings
+    )
+
+@dp.callback_query(F.data == "change_percent_worker")
+async def change_percent(callback: types.CallbackQuery, state:FSMContext):
+    await callback.message.edit_caption(
+        caption=admin_texts.enter_percent,
+        reply_markup=AdminInKeyboards.back('admin_settings')
+    )
+    await state.set_state(ChangePercent.message)
+    await state.update_data(message=callback.message.message_id)
+    await state.set_state(ChangePercent.text)
+
+@Bot_router.message(ChangePercent.text)
+async def confirm_percent(message: types.Message, state:FSMContext):
+    data = await state.update_data(text=message.text)
+    percent = Settings.change_percent(message.text)
+    if percent:
+        await bot.edit_message_caption(
+            caption=admin_texts.success_change_percent(message.text),
+            reply_markup=AdminInKeyboards.back('admin_settings'),
+            chat_id=message.chat.id,
+            message_id=data['message']
+        )
+
+    else:
+        await bot.edit_message_caption(
+            caption=admin_texts.error_change_percent,
+            reply_markup=AdminInKeyboards.back('admin_settings'),
+            chat_id=message.chat.id,
+            message_id=data['message']
+        )
+    await message.delete()
+    await state.clear()
+
+@dp.callback_query(F.data == "change_all_domain")
+async def change_domain(callback: types.CallbackQuery, state:FSMContext):
+    await callback.message.edit_caption(
+        caption=admin_texts.enter_domain,
+        reply_markup=AdminInKeyboards.back('admin_settings')
+    )
+    await state.set_state(ChangeDomain.message)
+    await state.update_data(message=callback.message.message_id)
+    await state.set_state(ChangeDomain.text)
+
+@Bot_router.message(ChangeDomain.text)
+async def confirm_domain(message: types.Message, state:FSMContext):
+    data = await state.update_data(text=message.text)
+    domain = Settings.change_domain(message.text)
+    if domain:
+        await bot.edit_message_caption(
+            caption=admin_texts.success_change_domain(message.text),
+            reply_markup=AdminInKeyboards.back('admin_settings'),
+            chat_id=message.chat.id,
+            message_id=data['message']
+        )
+
+    else:
+        await bot.edit_message_caption(
+            caption=admin_texts.error_change_domain,
+            reply_markup=AdminInKeyboards.back('admin_settings'),
+            chat_id=message.chat.id,
+            message_id=data['message']
+        )
+    await message.delete()
+    await state.clear()
+@dp.callback_query(F.data.startswith('service_'))
+async def service(callback: types.CallbackQuery):
+    data = callback.data.split('_')
+    service = Service.find_service(data[1])[0]
+    links = Link.get_links_at_service(data[1])
+    settings = Settings.get_settings()[0]
+    print(settings)
+    await callback.message.edit_caption(
+        caption=admin_texts.service(service, len(links), settings['domain']),
+        reply_markup=AdminInKeyboards.service(service['id'], service['active'])
+    )
+
+@dp.callback_query(F.data.startswith('hide_service_'))
+async def hide_service(callback: types.CallbackQuery):
+    data = callback.data.split('_')[2]
+    Service.change_active(data)
+    service = Service.find_service(data)[0]
+    links = Link.get_links_at_service(data)
+    settings = Settings.get_settings()[0]
+    print(settings)
+    await callback.message.edit_caption(
+        caption=admin_texts.service(service, len(links), settings['domain']),
+        reply_markup=AdminInKeyboards.service(service['id'], service['active'])
+    )
+
+@dp.callback_query(F.data == "admin_text")
+async def admin(callback: types.CallbackQuery):
+    user = User.find_user(callback.from_user.id)
+    admin_menu = Admin.get_admin_menu()
+    if not user['admin']:
+        await bot.send_message(
+            chat_id=callback.message.chat.id,
+            text=texts.admin_error,
+            reply_markup=InKeyboards.menu(False)
+        )
+        await callback.message.edit_text(
+            text=texts.admin_error,
+            reply_markup=InKeyboards.menu(False)
+        )
+        return
+    photo = FSInputFile(path=paths.menu)
+    await  bot.send_photo(
+        chat_id=callback.message.chat.id,
+        photo=photo,
+        caption=texts.admin_menu(admin_menu),
+        reply_markup=AdminInKeyboards.admin_keyboard
+    )
+    await callback.message.delete()
 
 # Запуск бота
 async def main():

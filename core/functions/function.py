@@ -65,64 +65,87 @@ class Admin:
 class User:
 
     @staticmethod
-    def add_user(id, username, refferer):
+    def change_mentor(user_id):
         try:
             connection = Database.connect_to_mysql()
-            cursor = connection.cursor()
-            if refferer == "0":
-                refferer = None
-            cursor.execute("INSERT INTO users (id, username, ref, supportChat, nickname) VALUES (%s, %s, %s, %s, %s)", (id, str(username), str(refferer), 1, str(username)))
+            cursor = connection.cursor(dictionary=True)
 
+            cursor.execute("UPDATE users SET mentor = NOT mentor WHERE id = %s", (int(user_id),))
+
+            print(cursor.rowcount)
+            if cursor.rowcount == 0:
+                Database.commit_and_close(connection)
+                print(False)
+                return False
             Database.commit_and_close(connection)
             return True
         except:
             return False
-    @staticmethod
-    def find_user(user_id):
-        print(user_id)
-        connection = Database.connect_to_mysql()
-        cursor = connection.cursor(dictionary=True)
-        # Пример SQL-запроса для проверки наличия пользователя
-        query = "SELECT * FROM users WHERE id = %s"
-        cursor.execute(query, (user_id,))
 
-
-        # Получение результата
-        result = cursor.fetchone()
-
-        links = len(Link.get_links_in_user(user_id))
-        result['links_count'] = links
-
-        cursor.execute("SELECT COUNT(*), SUM(amount) FROM profits WHERE user_id = %s AND status = %s", (user_id, "success"))
-        profits_data = cursor.fetchone()
-
-        result['profits_count'] = profits_data['COUNT(*)'] if profits_data else 0
-        result['profits_sum'] = profits_data['SUM(amount)'] if profits_data else 0
-
-        cursor.execute("SELECT * FROM requests WHERE user_id = %s ORDER BY id DESC LIMIT 1", (user_id,))
-        latest_request = cursor.fetchone()
-        result['request_id'] = latest_request['id'] if latest_request else 0
-        result['request_status'] = latest_request['status'] if latest_request else 0
-
-        Database.close_mysql_connection(connection)
-
-        return result
 
     @staticmethod
-    def change_status_nickname_status(id):
+    def add_user(id, username, refferer):
+
         connection = Database.connect_to_mysql()
-        cursor = connection.cursor(dictionary=True)
-
-        # Assuming `hide` is a column in the `user` table
-        query = "UPDATE users SET hide = NOT hide WHERE id = %s"
-        cursor.execute(query, (id,))
-
-        cursor.execute("SELECT hide FROM users WHERE id = %s", (id,))
-        updated_user = cursor.fetchone()
+        cursor = connection.cursor()
+        if refferer == "0" and refferer == "":
+            refferer = None
+        cursor.execute("INSERT INTO users (id, username, ref, supportChat, nickname, status) VALUES (%s, %s, %s, %s, %s, %s)", (id, str(username), str(refferer), 1, str(username), str("worker")))
 
         Database.commit_and_close(connection)
+        return True
 
-        return updated_user['hide'] if updated_user else None
+    @staticmethod
+    def find_user(user_id):
+        try:
+            print(user_id)
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+            # Пример SQL-запроса для проверки наличия пользователя
+            query = "SELECT * FROM users WHERE id = %s"
+            cursor.execute(query, (user_id,))
+
+
+            # Получение результата
+            result = cursor.fetchone()
+
+            links = len(Link.get_links_in_user(user_id))
+            result['links_count'] = links
+
+            cursor.execute("SELECT COUNT(*), SUM(amount) FROM profits WHERE user_id = %s AND status = %s", (user_id, "success"))
+            profits_data = cursor.fetchone()
+
+            result['profits_count'] = profits_data['COUNT(*)'] if profits_data else 0
+            result['profits_sum'] = profits_data['SUM(amount)'] if profits_data else 0
+
+            cursor.execute("SELECT * FROM requests WHERE user_id = %s ORDER BY id DESC LIMIT 1", (user_id,))
+            latest_request = cursor.fetchone()
+            result['request_id'] = latest_request['id'] if latest_request else 0
+            result['request_status'] = latest_request['status'] if latest_request else 0
+
+            Database.close_mysql_connection(connection)
+
+            return result
+        except:
+            return False
+    @staticmethod
+    def change_status_nickname_status(id):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            # Assuming `hide` is a column in the `user` table
+            query = "UPDATE users SET hide = NOT hide WHERE id = %s"
+            cursor.execute(query, (id,))
+
+            cursor.execute("SELECT hide FROM users WHERE id = %s", (id,))
+            updated_user = cursor.fetchone()
+
+            Database.commit_and_close(connection)
+
+            return updated_user['hide'] if updated_user else None
+        except:
+            return False
 
     @staticmethod
     def change_nickname(id, nickname):
@@ -174,18 +197,21 @@ class User:
             return "error"
     @staticmethod
     def is_user_exists(user_id):
-        connection = Database.connect_to_mysql()
-        cursor = connection.cursor()
-        # Пример SQL-запроса для проверки наличия пользователя
-        query = "SELECT * FROM users WHERE id = %s"
-        cursor.execute(query, (user_id,))
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor()
+            # Пример SQL-запроса для проверки наличия пользователя
+            query = "SELECT * FROM users WHERE id = %s"
+            cursor.execute(query, (user_id,))
 
-        # Получение результата
-        result = cursor.fetchone()
+            # Получение результата
+            result = cursor.fetchone()
 
-        Database.close_mysql_connection(connection)
+            Database.close_mysql_connection(connection)
 
-        return bool(result)
+            return bool(result)
+        except:
+            return False
 
     @staticmethod
     def get_all_users():
@@ -207,129 +233,286 @@ class User:
 class Country:
     @staticmethod
     def get_all_active_countries():
-        connection = Database.connect_to_mysql()
-        cursor = connection.cursor(dictionary=True)
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
 
-        cursor.execute("SELECT * FROM countries WHERE active = %s", (True,))
-        result = cursor.fetchall()
-        if len(result) == 0:
+            cursor.execute("SELECT * FROM countries WHERE active = %s", (True,))
+            result = cursor.fetchall()
+            if len(result) == 0:
+                Database.close_mysql_connection(connection)
+                print(False)
+                return False
+            print(result)
             Database.close_mysql_connection(connection)
-            print(False)
+            return result
+        except:
             return False
-        print(result)
-        Database.close_mysql_connection(connection)
-        return result
 
     @staticmethod
     def get_all_countries():
-        connection = Database.connect_to_mysql()
-        cursor = connection.cursor(dictionary=True)
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
 
-        cursor.execute("SELECT * FROM countries")
-        result = cursor.fetchall()
-        if len(result) == 0:
+            cursor.execute("SELECT * FROM countries")
+            result = cursor.fetchall()
+            if len(result) == 0:
+                Database.close_mysql_connection(connection)
+                print(False)
+                return False
+            print(result)
             Database.close_mysql_connection(connection)
-            print(False)
+            return result
+        except:
             return False
-        print(result)
-        Database.close_mysql_connection(connection)
-        return result
-
     @staticmethod
     def find_country(id):
-        connection = Database.connect_to_mysql()
-        cursor = connection.cursor(dictionary=True)
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
 
-        cursor.execute("SELECT * FROM countries WHERE id = %s", (id,))
-        result = cursor.fetchall()
-        if len(result) == 0:
+            cursor.execute("SELECT * FROM countries WHERE id = %s", (id,))
+            result = cursor.fetchall()
+            if len(result) == 0:
+                Database.close_mysql_connection(connection)
+                print(False)
+                return False
+            print(result)
             Database.close_mysql_connection(connection)
-            print(False)
+            return result
+        except:
             return False
-        print(result)
-        Database.close_mysql_connection(connection)
-        return result
+
+
+    @staticmethod
+    def change_active(country):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            cursor.execute("UPDATE countries SET active = NOT active WHERE id = %s", (int(country),))
+
+            print(cursor.rowcount)
+            if cursor.rowcount == 0:
+                Database.commit_and_close(connection)
+                print(False)
+                return False
+            Database.commit_and_close(connection)
+            return True
+        except:
+            return False
 class Service:
     @staticmethod
     def get_services_in_country(country):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            query = """
+            SELECT services.id,services.name, services.active, services.country_id, countries.id AS country_id, countries.name AS country_name, countries.flag AS country_flag, countries.active AS country_active
+            FROM services
+            JOIN countries ON services.country_id = countries.id
+            WHERE services.active = 1 AND services.country_id = %s
+            """
+
+            cursor.execute(query, (country,))
+            result = cursor.fetchall()
+
+            if len(result) == 0:
+                Database.close_mysql_connection(connection)
+                print(False)
+                return False
+
+            for row in result:
+                print(row)
+                row['country'] = {'id': row['country_id'], 'name': row['country_name'], 'flag': row['country_flag'], 'country_active':row['country_active']}
+                del row['country_id']  # Убираем избыточный столбец
+                del row['country_flag']
+                del row['country_name']
+                del row['country_active']
+            print(result)
+            Database.close_mysql_connection(connection)
+            return result
+        except:
+            return False
+
+
+    @staticmethod
+    def get_all_services():
         connection = Database.connect_to_mysql()
         cursor = connection.cursor(dictionary=True)
 
-        query = """
-        SELECT services.id,services.name, services.active, services.country_id, countries.id AS country_id, countries.name AS country_name, countries.flag AS country_flag, countries.active AS country_active
-        FROM services
-        JOIN countries ON services.country_id = countries.id
-        WHERE services.active = 1 AND services.country_id = %s
-        """
+        try:
+            select_query = "SELECT * FROM services"
+            cursor.execute(select_query)
 
-        cursor.execute(query, (country,))
-        result = cursor.fetchall()
+            result = cursor.fetchall()
 
-        if len(result) == 0:
             Database.close_mysql_connection(connection)
-            print(False)
+            return result
+        except Exception as e:
+            print(f"Error: {e}")
+            Database.close_mysql_connection(connection)
             return False
 
-        for row in result:
-            print(row)
-            row['country'] = {'id': row['country_id'], 'name': row['country_name'], 'flag': row['country_flag'], 'country_active':row['country_active']}
-            del row['country_id']  # Убираем избыточный столбец
-            del row['country_flag']
-            del row['country_name']
-            del row['country_active']
-        print(result)
-        Database.close_mysql_connection(connection)
-        return result
+    @staticmethod
+    def find_service(id):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
 
+        try:
+            select_query = "SELECT * FROM services WHERE id = %s"
+            cursor.execute(select_query, (id,))
 
+            result = cursor.fetchall()
+
+            Database.close_mysql_connection(connection)
+            return result
+        except Exception as e:
+            print(f"Error: {e}")
+            Database.close_mysql_connection(connection)
+            return False
+
+    @staticmethod
+    def change_subdomain(service, domain):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            cursor.execute("UPDATE services SET subdomain = %s WHERE id = %s", (domain, int(service),))
+
+            print(cursor.rowcount)
+            if cursor.rowcount == 0:
+                Database.commit_and_close(connection)
+                print(False)
+                return False
+            Database.commit_and_close(connection)
+            return True
+        except:
+            return False
+    @staticmethod
+    def change_active(service):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            cursor.execute("UPDATE services SET active = NOT active WHERE id = %s", (int(service),))
+
+            print(cursor.rowcount)
+            if cursor.rowcount == 0:
+                Database.commit_and_close(connection)
+                print(False)
+                return False
+            Database.commit_and_close(connection)
+            return True
+        except:
+            return False
+class Settings:
+    @staticmethod
+    def get_settings():
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        try:
+            select_query = "SELECT * FROM settings WHERE id = 1"
+            cursor.execute(select_query)
+
+            result = cursor.fetchall()
+
+            Database.close_mysql_connection(connection)
+            return result
+        except Exception as e:
+            print(f"Error: {e}")
+            Database.close_mysql_connection(connection)
+            return False
+
+    @staticmethod
+    def change_domain(domain):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            # Предположим, что у вас есть таблица links и поле checker, которое вы хотите обновить
+            update_query = "UPDATE settings SET domain = %s WHERE id = 1"
+            cursor.execute(update_query, (domain,))
+
+            # Подтверждаем транзакцию и закрываем соединение
+            Database.commit_and_close(connection)
+
+            return True
+        except:
+            return False
+    @staticmethod
+    def change_percent(percent):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            # Предположим, что у вас есть таблица links и поле checker, которое вы хотите обновить
+            update_query = "UPDATE settings SET percent_worker = %s WHERE id = 1"
+            cursor.execute(update_query, (percent,))
+
+            # Подтверждаем транзакцию и закрываем соединение
+            Database.commit_and_close(connection)
+            return True
+        except:
+            return False
 class Link:
 
     @staticmethod
     def create_link(data):
-        connection = Database.connect_to_mysql()
-        cursor = connection.cursor(dictionary=True)
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
 
-        name = data['name']
-        user_id = data['id']
-        price = data['price']
-        service_id = data['service']
-        description = data['description']
-        checker = 0
-        photo = data['photo']
-        address = data['address']
-        author = data['author']
-        number  = data['number']
+            name = data['name']
+            user_id = data['id']
+            price = data['price']
+            service_id = data['service']
+            description = data['description']
+            checker = 0
+            photo = data['photo']
+            address = data['address']
+            author = data['author']
+            number  = data['number']
 
 
-        cursor.execute("INSERT INTO links (name, price, service, description, checker, photo, address, author, number, user) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (name, price, service_id, description, checker, photo, address, author, number, user_id))
+            cursor.execute("INSERT INTO links (name, price, service, description, checker, photo, address, author, number, user) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (name, price, service_id, description, checker, photo, address, author, number, user_id))
 
-        cursor.execute("SELECT * FROM links WHERE id = LAST_INSERT_ID()")
+            cursor.execute("SELECT * FROM links WHERE id = LAST_INSERT_ID()")
 
-        # Извлекаем данные
-        created_link_data = cursor.fetchone()
+            # Извлекаем данные
+            created_link_data = cursor.fetchone()
 
-        # Подтверждаем транзакцию и закрываем соединение
-        Database.commit_and_close(connection)
+            # Подтверждаем транзакцию и закрываем соединение
+            Database.commit_and_close(connection)
 
-        # Возвращаем данные созданной записи
-        return created_link_data
+            # Возвращаем данные созданной записи
+            return created_link_data
+        except:
+            return False
 
     @staticmethod
     def change_checker(id):
-        connection = Database.connect_to_mysql()
-        cursor = connection.cursor(dictionary=True)
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
 
-        # Предположим, что у вас есть таблица links и поле checker, которое вы хотите обновить
-        update_query = "UPDATE links SET checker = NOT checker WHERE id = %s"
-        cursor.execute(update_query, (id,))
+            # Предположим, что у вас есть таблица links и поле checker, которое вы хотите обновить
+            update_query = "UPDATE links SET checker = NOT checker WHERE id = %s"
+            cursor.execute(update_query, (id,))
 
-        # Подтверждаем транзакцию и закрываем соединение
-        Database.commit_and_close(connection)
+            # Подтверждаем транзакцию и закрываем соединение
+            Database.commit_and_close(connection)
 
-        return True
+            return True
+        except:
+            return False
 
     @staticmethod
     def change_price(id, price):
+
         connection = Database.connect_to_mysql()
         cursor = connection.cursor(dictionary=True)
 
@@ -390,75 +573,191 @@ class Link:
             return False
     @staticmethod
     def find_link(id):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            query = """
+                SELECT links.*, services.id AS service_id, services.name AS service_name, services.country_id AS service_country, services.active AS service_active,
+                 countries.id AS countries_id, countries.name AS countries_name, countries.flag AS countries_flag, countries.active AS countries_active
+                FROM links
+                JOIN services ON links.service = services.id
+                JOIN countries ON services.country_id = countries.id
+                WHERE links.id = %s
+            """
+
+            cursor.execute(query, (id,))
+            result = cursor.fetchall()
+            print(result)
+            Database.close_mysql_connection(connection)
+            print(len(result))
+            if len(result) == 0:
+                return False
+
+            for row in result:
+                row['service'] = {
+                    'id': row['service_id'],
+                    'name': row['service_name'],
+                    'country_id': row['service_country'],
+                    'active': row['service_active']
+                    # Добавьте остальные поля, если нужно
+                }
+                row['country'] = {
+                    'id': row['countries_id'],
+                    'name': row['countries_name'],
+                    'flag': row['countries_flag'],
+                    'active': row['countries_active']
+                    # Добавьте остальные поля, если нужно
+                }
+                del row['service_id']
+                del row['service_name']
+                del row['service_country']
+                del row['service_active']
+                del row['countries_id']
+                del row['countries_name']
+                del row['countries_flag']
+                del row['countries_active']
+
+            print(result)
+            return result[0]
+        except:
+            return False
+    @staticmethod
+    def get_links_at_service(service_id):
         connection = Database.connect_to_mysql()
         cursor = connection.cursor(dictionary=True)
 
-        query = """
-            SELECT links.*, services.id AS service_id, services.name AS service_name, services.country_id AS service_country, services.active AS service_active,
-             countries.id AS countries_id, countries.name AS countries_name, countries.flag AS countries_flag, countries.active AS countries_active
-            FROM links
-            JOIN services ON links.service = services.id
-            JOIN countries ON services.country_id = countries.id
-            WHERE links.id = %s
-        """
+        try:
+            select_query = "SELECT * FROM links WHERE service = %s"
+            cursor.execute(select_query, (service_id,))
 
-        cursor.execute(query, (id,))
-        result = cursor.fetchall()
-        print(result)
-        Database.close_mysql_connection(connection)
-        print(len(result))
-        if len(result) == 0:
+            result = cursor.fetchall()
+
+            Database.close_mysql_connection(connection)
+            return result
+        except Exception as e:
+            print(f"Error: {e}")
+            Database.close_mysql_connection(connection)
             return False
-
-        for row in result:
-            row['service'] = {
-                'id': row['service_id'],
-                'name': row['service_name'],
-                'country_id': row['service_country'],
-                'active': row['service_active']
-                # Добавьте остальные поля, если нужно
-            }
-            row['country'] = {
-                'id': row['countries_id'],
-                'name': row['countries_name'],
-                'flag': row['countries_flag'],
-                'active': row['countries_active']
-                # Добавьте остальные поля, если нужно
-            }
-            del row['service_id']
-            del row['service_name']
-            del row['service_country']
-            del row['service_active']
-            del row['countries_id']
-            del row['countries_name']
-            del row['countries_flag']
-            del row['countries_active']
-
-        print(result)
-        return result[0]
 
 class Request:
     @staticmethod
-    def create_request(username, id, type, text = None):
-        connection = Database.connect_to_mysql()
-        cursor = connection.cursor(dictionary=True)
+    def create_request(username, id, type, message_id, text = None):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
 
-        cursor.execute("INSERT INTO requests (type, textType, username, user_id, status) VALUES (%s, %s, %s, %s, %s)", (type, text, username, id, "wait"))
+            cursor.execute("INSERT INTO requests (type, textType, username, user_id, status, message_id) VALUES (%s, %s, %s, %s, %s, %s)", (type, text, username, id, "wait", message_id))
 
-        Database.commit_and_close(connection)
-
+            Database.commit_and_close(connection)
+        except:
+            return False
     @staticmethod
     def change_status(user_id, new_status):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            # Найдем последнюю запись с заданным user_id
+            cursor.execute("SELECT * FROM requests WHERE user_id = %s ORDER BY created_at DESC LIMIT 1", (user_id,))
+            latest_request = cursor.fetchone()
+
+            if latest_request:
+                # Изменяем статус
+                cursor.execute("UPDATE requests SET status = %s WHERE id = %s", (new_status, latest_request['id']))
+
+                # Завершаем транзакцию и закрываем соединение
+                Database.commit_and_close(connection)
+        except:
+            return False
+    @staticmethod
+    def get_all_requests():
         connection = Database.connect_to_mysql()
         cursor = connection.cursor(dictionary=True)
 
-        # Найдем последнюю запись с заданным user_id
-        cursor.execute("SELECT * FROM requests WHERE user_id = %s ORDER BY created_at DESC LIMIT 1", (user_id,))
-        latest_request = cursor.fetchone()
+        try:
+            select_query = "SELECT * FROM requests"
+            cursor.execute(select_query)
 
-        if latest_request:
-            # Изменяем статус
-            cursor.execute("UPDATE requests SET status = %s WHERE id = %s", (new_status, latest_request['id']))
+            result = cursor.fetchall()
 
-            # Завершаем транзакцию и закрываем соединение
-            Database.commit_and_close(connection)
+            Database.close_mysql_connection(connection)
+            return result
+        except Exception as e:
+            print(f"Error: {e}")
+            Database.close_mysql_connection(connection)
+            return False
+
+    @staticmethod
+    def find_request(id):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        try:
+            select_query = "SELECT * FROM requests WHERE id = %s"
+            cursor.execute(select_query, (id,))
+
+            result = cursor.fetchall()
+
+            Database.close_mysql_connection(connection)
+            return result
+        except Exception as e:
+            print(f"Error: {e}")
+            Database.close_mysql_connection(connection)
+            return False
+
+    @staticmethod
+    def find_request_at_user(user_id):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        try:
+            select_query = "SELECT * FROM requests WHERE user_id = %s ORDER BY id DESC LIMIT 1"
+            cursor.execute(select_query, (user_id,))
+
+            result = cursor.fetchone()
+            print(result)
+            Database.close_mysql_connection(connection)
+            return result
+        except Exception as e:
+            print(f"Error: {e}")
+            Database.close_mysql_connection(connection)
+            return False
+class Profits:
+    @staticmethod
+    def get_profits_in_user(user_id):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        try:
+            # Предположим, что у вас есть таблица links и поле user_id, которое связывает ссылки с пользователями
+            print(user_id)
+            select_query = "SELECT * FROM profits WHERE user_id = %s"
+            cursor.execute(select_query, (user_id,))
+
+            result = cursor.fetchall()
+
+            Database.close_mysql_connection(connection)
+            return result
+        except Exception as e:
+            print(f"Error: {e}")
+            Database.close_mysql_connection(connection)
+            return False
+
+    @staticmethod
+    def get_all_profits():
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        try:
+            select_query = "SELECT * FROM profits"
+            cursor.execute(select_query)
+
+            result = cursor.fetchall()
+
+            Database.close_mysql_connection(connection)
+            return result
+        except Exception as e:
+            print(f"Error: {e}")
+            Database.close_mysql_connection(connection)
+            return False

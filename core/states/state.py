@@ -35,3 +35,18 @@ class ChangePrice(StatesGroup):
 class SendAll(StatesGroup):
     message = State()
     text = State()
+
+
+class ChangeSubDomain(StatesGroup):
+    message = State()
+    text = State()
+    service = State()
+
+
+class ChangePercent(StatesGroup):
+    message = State()
+    text = State()
+
+class ChangeDomain(StatesGroup):
+    message = State()
+    text = State()
