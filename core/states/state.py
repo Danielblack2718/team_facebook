@@ -50,3 +50,8 @@ class ChangePercent(StatesGroup):
 class ChangeDomain(StatesGroup):
     message = State()
     text = State()
+
+class CustomText(StatesGroup):
+    message = State()
+    text = State()
+    log = State()

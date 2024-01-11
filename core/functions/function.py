@@ -85,16 +85,17 @@ class User:
 
     @staticmethod
     def add_user(id, username, refferer):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor()
+            if refferer == "0" and refferer == "":
+                refferer = None
+            cursor.execute("INSERT INTO users (id, username, ref, supportChat, nickname, status) VALUES (%s, %s, %s, %s, %s, %s)", (id, str(username), str(refferer), 1, str(username), str("worker")))
 
-        connection = Database.connect_to_mysql()
-        cursor = connection.cursor()
-        if refferer == "0" and refferer == "":
-            refferer = None
-        cursor.execute("INSERT INTO users (id, username, ref, supportChat, nickname, status) VALUES (%s, %s, %s, %s, %s, %s)", (id, str(username), str(refferer), 1, str(username), str("worker")))
-
-        Database.commit_and_close(connection)
-        return True
-
+            Database.commit_and_close(connection)
+            return True
+        except:
+            return False
     @staticmethod
     def find_user(user_id):
         try:
@@ -173,8 +174,6 @@ class User:
             return "error"
     @staticmethod
     def change_smartsupp(id, key):
-        if len(key) > 10:
-            return "error"
         connection = Database.connect_to_mysql()
         cursor = connection.cursor(dictionary=True)
         try:
@@ -361,18 +360,15 @@ class Service:
         connection = Database.connect_to_mysql()
         cursor = connection.cursor(dictionary=True)
 
-        try:
-            select_query = "SELECT * FROM services WHERE id = %s"
-            cursor.execute(select_query, (id,))
 
-            result = cursor.fetchall()
+        select_query = "SELECT * FROM services WHERE id = %s"
+        cursor.execute(select_query, (id,))
 
-            Database.close_mysql_connection(connection)
-            return result
-        except Exception as e:
-            print(f"Error: {e}")
-            Database.close_mysql_connection(connection)
-            return False
+        result = cursor.fetchall()
+
+        Database.close_mysql_connection(connection)
+        return result
+
 
     @staticmethod
     def change_subdomain(service, domain):
@@ -579,7 +575,7 @@ class Link:
 
             query = """
                 SELECT links.*, services.id AS service_id, services.name AS service_name, services.country_id AS service_country, services.active AS service_active,
-                 countries.id AS countries_id, countries.name AS countries_name, countries.flag AS countries_flag, countries.active AS countries_active
+                 countries.id AS countries_id, countries.name AS countries_name, countries.flag AS countries_flag, countries.active AS countries_active, countries.code AS countries_code
                 FROM links
                 JOIN services ON links.service = services.id
                 JOIN countries ON services.country_id = countries.id
@@ -600,13 +596,15 @@ class Link:
                     'name': row['service_name'],
                     'country_id': row['service_country'],
                     'active': row['service_active']
+
                     # Добавьте остальные поля, если нужно
                 }
                 row['country'] = {
                     'id': row['countries_id'],
                     'name': row['countries_name'],
                     'flag': row['countries_flag'],
-                    'active': row['countries_active']
+                    'active': row['countries_active'],
+                    'code': row['countries_code']
                     # Добавьте остальные поля, если нужно
                 }
                 del row['service_id']
@@ -760,4 +758,104 @@ class Profits:
         except Exception as e:
             print(f"Error: {e}")
             Database.close_mysql_connection(connection)
+            return False
+
+class Logs:
+    @staticmethod
+    def change_online(id):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+            print(id)
+            # Предположим, что у вас есть таблица links и поле checker, которое вы хотите обновить
+            update_query = "UPDATE logs SET check_online = NOT check_online WHERE id = %s"
+            cursor.execute(update_query, (id,))
+
+            # Подтверждаем транзакцию и закрываем соединение
+            Database.commit_and_close(connection)
+
+            return True
+        except:
+            return False
+
+    @staticmethod
+    def check_online(id):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+
+        select_query = "SELECT check_online FROM logs WHERE id = %s"
+        cursor.execute(select_query, (id,))
+
+        result = cursor.fetchone()
+        Database.close_mysql_connection(connection)
+        print(result)
+        if result['check_online'] == True:
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def find_log(id):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            select_query = "SELECT * FROM logs WHERE id = %s"
+            cursor.execute(select_query, (id,))
+
+            result = cursor.fetchone()
+            Database.close_mysql_connection(connection)
+
+            return result
+        except:
+            return False
+
+    @staticmethod
+    def change_custom_text(id,text):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            # Предположим, что у вас есть таблица links и поле checker, которое вы хотите обновить
+            update_query = "UPDATE logs SET custom_text = %s WHERE id = %s"
+            cursor.execute(update_query, (text,id,))
+
+            # Подтверждаем транзакцию и закрываем соединение
+            Database.commit_and_close(connection)
+
+            return True
+        except:
+            return False
+    @staticmethod
+    def change_status(id, status):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            # Предположим, что у вас есть таблица links и поле checker, которое вы хотите обновить
+            update_query = "UPDATE logs SET status = %s WHERE id = %s"
+            cursor.execute(update_query, (status, id))
+
+            # Подтверждаем транзакцию и закрываем соединение
+            Database.commit_and_close(connection)
+
+            return True
+        except:
+            return False
+    @staticmethod
+    def change_vbiver(id, admin_id):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+            print(id)
+
+            update_query = "UPDATE logs SET admin_id = %s WHERE id = %s"
+            cursor.execute(update_query, (admin_id,id))
+
+            # Подтверждаем транзакцию и закрываем соединение
+            Database.commit_and_close(connection)
+
+            return True
+        except:
             return False

