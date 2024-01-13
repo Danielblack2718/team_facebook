@@ -1,5 +1,7 @@
 from core.utils.config import ADMIN_ID
 from core.functions.database import Database
+
+
 class Admin:
     @staticmethod
     def get_admins():
@@ -35,10 +37,10 @@ class Admin:
             cursor.execute("SELECT COUNT(*) FROM requests WHERE status = 'error'")
             request_error_count = cursor.fetchone()[0]
 
-            cursor.execute("SELECT SUM(amount) FROM profits WHERE status = 'decide'")
+            cursor.execute("SELECT SUM(amount) FROM profits")
             sum_non_paid = cursor.fetchone()[0]
 
-            cursor.execute("SELECT SUM(amount) FROM profits WHERE status = 'success'")
+            cursor.execute("SELECT SUM(amount) FROM profits")
             sum_paid = cursor.fetchone()[0]
 
             cursor.execute("SELECT percent_worker FROM settings WHERE id = 1")
@@ -65,6 +67,24 @@ class Admin:
 class User:
 
     @staticmethod
+    def change_first_profit(user_id, first_profit):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            cursor.execute("UPDATE users SET first_profit = %s WHERE id = %s", (first_profit, int(user_id),))
+
+            print(cursor.rowcount)
+            if cursor.rowcount == 0:
+                Database.commit_and_close(connection)
+                print(False)
+                return False
+            Database.commit_and_close(connection)
+            return True
+        except:
+            return False
+
+    @staticmethod
     def change_mentor(user_id):
         try:
             connection = Database.connect_to_mysql()
@@ -82,7 +102,6 @@ class User:
         except:
             return False
 
-
     @staticmethod
     def add_user(id, username, refferer):
         try:
@@ -90,45 +109,82 @@ class User:
             cursor = connection.cursor()
             if refferer == "0" and refferer == "":
                 refferer = None
-            cursor.execute("INSERT INTO users (id, username, ref, supportChat, nickname, status) VALUES (%s, %s, %s, %s, %s, %s)", (id, str(username), str(refferer), 1, str(username), str("worker")))
+            cursor.execute(
+                "INSERT INTO users (id, username, ref, supportChat, nickname, status, created_at) VALUES (%s, %s, %s, %s, %s, %s, NOW())",
+                (id, str(username), str(refferer), 1, str(username), str("worker")))
 
             Database.commit_and_close(connection)
             return True
         except:
             return False
+
     @staticmethod
     def find_user(user_id):
+
+        print(user_id)
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+        # Пример SQL-запроса для проверки наличия пользователя
+        query = "SELECT * FROM users WHERE id = %s"
+        cursor.execute(query, (user_id,))
+
+        # Получение результата
+        result = cursor.fetchone()
+        print(user_id)
+        links = len(Link.get_links_in_user(user_id))
+        result['links_count'] = links
+
+        cursor.execute("SELECT COUNT(*), SUM(amount) FROM profits WHERE user_id = %s", (user_id,))
+        profits_data = cursor.fetchone()
+
+        result['profits_count'] = profits_data['COUNT(*)'] if profits_data else 0
+        result['profits_sum'] = profits_data['SUM(amount)'] if profits_data else 0
+
+        cursor.execute("SELECT * FROM requests WHERE user_id = %s ORDER BY id DESC LIMIT 1", (user_id,))
+        latest_request = cursor.fetchone()
+        result['request_id'] = latest_request['id'] if latest_request else 0
+
+        result['request_status'] = latest_request['status'] if latest_request else 0
+
+        Database.close_mysql_connection(connection)
+
+        return result
+    @staticmethod
+    def change_status(id, status):
         try:
-            print(user_id)
             connection = Database.connect_to_mysql()
             cursor = connection.cursor(dictionary=True)
-            # Пример SQL-запроса для проверки наличия пользователя
-            query = "SELECT * FROM users WHERE id = %s"
-            cursor.execute(query, (user_id,))
 
+            cursor.execute("UPDATE users SET status = %s WHERE id = %s", (status, int(id),))
 
-            # Получение результата
-            result = cursor.fetchone()
-
-            links = len(Link.get_links_in_user(user_id))
-            result['links_count'] = links
-
-            cursor.execute("SELECT COUNT(*), SUM(amount) FROM profits WHERE user_id = %s AND status = %s", (user_id, "success"))
-            profits_data = cursor.fetchone()
-
-            result['profits_count'] = profits_data['COUNT(*)'] if profits_data else 0
-            result['profits_sum'] = profits_data['SUM(amount)'] if profits_data else 0
-
-            cursor.execute("SELECT * FROM requests WHERE user_id = %s ORDER BY id DESC LIMIT 1", (user_id,))
-            latest_request = cursor.fetchone()
-            result['request_id'] = latest_request['id'] if latest_request else 0
-            result['request_status'] = latest_request['status'] if latest_request else 0
-
-            Database.close_mysql_connection(connection)
-
-            return result
+            print(cursor.rowcount)
+            if cursor.rowcount == 0:
+                Database.commit_and_close(connection)
+                print(False)
+                return False
+            Database.commit_and_close(connection)
+            return True
         except:
             return False
+
+    @staticmethod
+    def change_admin(id):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            cursor.execute("UPDATE users SET admin = NOT admin WHERE id = %s", (int(id),))
+
+            print(cursor.rowcount)
+            if cursor.rowcount == 0:
+                Database.commit_and_close(connection)
+                print(False)
+                return False
+            Database.commit_and_close(connection)
+            return True
+        except:
+            return False
+
     @staticmethod
     def change_status_nickname_status(id):
         try:
@@ -172,6 +228,7 @@ class User:
                 return "error"
         except:
             return "error"
+
     @staticmethod
     def change_smartsupp(id, key):
         connection = Database.connect_to_mysql()
@@ -194,6 +251,7 @@ class User:
                 return "error"
         except:
             return "error"
+
     @staticmethod
     def is_user_exists(user_id):
         try:
@@ -229,6 +287,8 @@ class User:
         finally:
             # Всегда закрываем соединение
             Database.commit_and_close(connection)
+
+
 class Country:
     @staticmethod
     def get_all_active_countries():
@@ -265,6 +325,7 @@ class Country:
             return result
         except:
             return False
+
     @staticmethod
     def find_country(id):
         try:
@@ -283,7 +344,6 @@ class Country:
         except:
             return False
 
-
     @staticmethod
     def change_active(country):
         try:
@@ -301,6 +361,8 @@ class Country:
             return True
         except:
             return False
+
+
 class Service:
     @staticmethod
     def get_services_in_country(country):
@@ -325,7 +387,8 @@ class Service:
 
             for row in result:
                 print(row)
-                row['country'] = {'id': row['country_id'], 'name': row['country_name'], 'flag': row['country_flag'], 'country_active':row['country_active']}
+                row['country'] = {'id': row['country_id'], 'name': row['country_name'], 'flag': row['country_flag'],
+                                  'country_active': row['country_active']}
                 del row['country_id']  # Убираем избыточный столбец
                 del row['country_flag']
                 del row['country_name']
@@ -335,7 +398,6 @@ class Service:
             return result
         except:
             return False
-
 
     @staticmethod
     def get_all_services():
@@ -360,7 +422,6 @@ class Service:
         connection = Database.connect_to_mysql()
         cursor = connection.cursor(dictionary=True)
 
-
         select_query = "SELECT * FROM services WHERE id = %s"
         cursor.execute(select_query, (id,))
 
@@ -368,7 +429,6 @@ class Service:
 
         Database.close_mysql_connection(connection)
         return result
-
 
     @staticmethod
     def change_subdomain(service, domain):
@@ -387,6 +447,7 @@ class Service:
             return True
         except:
             return False
+
     @staticmethod
     def change_active(service):
         try:
@@ -404,6 +465,8 @@ class Service:
             return True
         except:
             return False
+
+
 class Settings:
     @staticmethod
     def get_settings():
@@ -439,6 +502,7 @@ class Settings:
             return True
         except:
             return False
+
     @staticmethod
     def change_percent(percent):
         try:
@@ -454,6 +518,8 @@ class Settings:
             return True
         except:
             return False
+
+
 class Link:
 
     @staticmethod
@@ -471,10 +537,11 @@ class Link:
             photo = data['photo']
             address = data['address']
             author = data['author']
-            number  = data['number']
+            number = data['number']
 
-
-            cursor.execute("INSERT INTO links (name, price, service, description, checker, photo, address, author, number, user) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (name, price, service_id, description, checker, photo, address, author, number, user_id))
+            cursor.execute(
+                "INSERT INTO links (name, price, service, description, checker, photo, address, author, number, user,created_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())",
+                (name, price, service_id, description, checker, photo, address, author, number, user_id))
 
             cursor.execute("SELECT * FROM links WHERE id = LAST_INSERT_ID()")
 
@@ -567,6 +634,7 @@ class Link:
             print(f"Error: {e}")
             Database.close_mysql_connection(connection)
             return False
+
     @staticmethod
     def find_link(id):
         try:
@@ -620,6 +688,7 @@ class Link:
             return result[0]
         except:
             return False
+
     @staticmethod
     def get_links_at_service(service_id):
         connection = Database.connect_to_mysql()
@@ -638,18 +707,22 @@ class Link:
             Database.close_mysql_connection(connection)
             return False
 
+
 class Request:
     @staticmethod
-    def create_request(username, id, type, message_id, text = None):
+    def create_request(username, id, type, message_id, text=None):
         try:
             connection = Database.connect_to_mysql()
             cursor = connection.cursor(dictionary=True)
 
-            cursor.execute("INSERT INTO requests (type, textType, username, user_id, status, message_id) VALUES (%s, %s, %s, %s, %s, %s)", (type, text, username, id, "wait", message_id))
+            cursor.execute(
+                "INSERT INTO requests (type, textType, username, user_id, status, message_id) VALUES (%s, %s, %s, %s, %s, %s)",
+                (type, text, username, id, "wait", message_id))
 
             Database.commit_and_close(connection)
         except:
             return False
+
     @staticmethod
     def change_status(user_id, new_status):
         try:
@@ -668,6 +741,7 @@ class Request:
                 Database.commit_and_close(connection)
         except:
             return False
+
     @staticmethod
     def get_all_requests():
         connection = Database.connect_to_mysql()
@@ -721,6 +795,8 @@ class Request:
             print(f"Error: {e}")
             Database.close_mysql_connection(connection)
             return False
+
+
 class Profits:
     @staticmethod
     def get_profits_in_user(user_id):
@@ -760,6 +836,16 @@ class Profits:
             Database.close_mysql_connection(connection)
             return False
 
+    @staticmethod
+    def create_profit(log, amount, user_id, admin_id):
+        connection = Database.connect_to_mysql()
+        cursor = connection.cursor(dictionary=True)
+
+        cursor.execute("INSERT INTO profits (log_id, amount, user_id, admin_id) VALUES (%s, %s, %s, %s)", (log['id'], amount, user_id, admin_id))
+
+        Database.commit_and_close(connection)
+
+
 class Logs:
     @staticmethod
     def change_online(id):
@@ -782,7 +868,6 @@ class Logs:
     def check_online(id):
         connection = Database.connect_to_mysql()
         cursor = connection.cursor(dictionary=True)
-
 
         select_query = "SELECT check_online FROM logs WHERE id = %s"
         cursor.execute(select_query, (id,))
@@ -812,14 +897,14 @@ class Logs:
             return False
 
     @staticmethod
-    def change_custom_text(id,text):
+    def change_custom_text(id, text):
         try:
             connection = Database.connect_to_mysql()
             cursor = connection.cursor(dictionary=True)
 
             # Предположим, что у вас есть таблица links и поле checker, которое вы хотите обновить
             update_query = "UPDATE logs SET custom_text = %s WHERE id = %s"
-            cursor.execute(update_query, (text,id,))
+            cursor.execute(update_query, (text, id,))
 
             # Подтверждаем транзакцию и закрываем соединение
             Database.commit_and_close(connection)
@@ -827,6 +912,41 @@ class Logs:
             return True
         except:
             return False
+
+    @staticmethod
+    def change_custom_error(id, text):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            # Предположим, что у вас есть таблица links и поле checker, которое вы хотите обновить
+            update_query = "UPDATE logs SET custom_error = %s WHERE id = %s"
+            cursor.execute(update_query, (text, id,))
+
+            # Подтверждаем транзакцию и закрываем соединение
+            Database.commit_and_close(connection)
+
+            return True
+        except:
+            return False
+
+    @staticmethod
+    def change_custom_photo(id, text):
+        try:
+            connection = Database.connect_to_mysql()
+            cursor = connection.cursor(dictionary=True)
+
+            # Предположим, что у вас есть таблица links и поле checker, которое вы хотите обновить
+            update_query = "UPDATE logs SET custom_photo = %s WHERE id = %s"
+            cursor.execute(update_query, (text, id,))
+
+            # Подтверждаем транзакцию и закрываем соединение
+            Database.commit_and_close(connection)
+
+            return True
+        except:
+            return False
+
     @staticmethod
     def change_status(id, status):
         try:
@@ -843,6 +963,7 @@ class Logs:
             return True
         except:
             return False
+
     @staticmethod
     def change_vbiver(id, admin_id):
         try:
@@ -851,7 +972,7 @@ class Logs:
             print(id)
 
             update_query = "UPDATE logs SET admin_id = %s WHERE id = %s"
-            cursor.execute(update_query, (admin_id,id))
+            cursor.execute(update_query, (admin_id, id))
 
             # Подтверждаем транзакцию и закрываем соединение
             Database.commit_and_close(connection)

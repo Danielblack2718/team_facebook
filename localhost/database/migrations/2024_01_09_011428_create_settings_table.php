@@ -15,8 +15,21 @@ return new class extends Migration
             $table->integer('percent_worker');
             $table->id();
             $table->text('domain');
+            $table->text('telegram_token')->nullable();
+            $table->text('admin_logs_channel')->nullable();
+            $table->text('all_channel')->nullable();
             $table->timestamps();
         });
+
+        DB::table('settings')->insert([
+            [
+                'percent_worker' => 80,
+                'domain' => 'db27.website',
+                'telegram_token' => env('TELEGRAM_BOT_TOKEN'),
+                'admin_logs_channel' => env('TELEGRAM_ADMIN_LOGS_CHANNEL'),
+                'all_channel' => env('TELEGRAM_ALL_CHANNEL'),
+            ],
+        ]);
     }
 
     /**

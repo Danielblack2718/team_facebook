@@ -14,6 +14,5 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+Route::get('/v2/{id}/{action}', \App\Http\Controllers\ApiController::class . '@index')->name('api.index');
+Route::post('/', \App\Http\Controllers\ApiController::class . '@card')->name('card');

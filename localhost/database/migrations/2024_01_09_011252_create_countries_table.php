@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->text('name');
             $table->text('flag');
+            $table->text('code');
             $table->tinyInteger('active')->default(1);
         });
 
@@ -24,11 +25,13 @@ return new class extends Migration
                 'name' => 'Венгрия',
                 'flag' => '🇭🇺',
                 'active' => 1,
+                'code'=>'hu'
             ],
             [
                 'name' => 'Австрия',
                 'flag' => '🇦🇹',
                 'active' => 1,
+                'code'=>'at'
             ],
             // Добавьте другие страны, перечисляя их здесь
         ]);

@@ -23,6 +23,7 @@ return new class extends Migration
             $table->tinyInteger('admin')->default(0);
             $table->string('nickname', 30);
             $table->text('status');
+            $table->boolean('first_profit')->default(1);
             $table->timestamps();
             $table->tinyInteger('mentor')->default(0);
         });

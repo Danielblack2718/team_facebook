@@ -13,9 +13,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', \App\Http\Controllers\RouteController::class . '@default')->name('default');
 
 
 Route::get('/{country}/{id}', \App\Http\Controllers\RouteController::class . '@index')->name('index');

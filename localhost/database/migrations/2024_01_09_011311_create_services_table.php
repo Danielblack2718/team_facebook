@@ -33,7 +33,7 @@ return new class extends Migration
             ],
             [
                 'name' => 'JOFOGAS',
-                'country_id' => 2,
+                'country_id' => 1,
                 'active' => 1,
                 'country' => '🇦🇹',
                 'subdomain' => 'jofogas-at',
@@ -49,7 +49,7 @@ return new class extends Migration
             ],
             [
                 'name' => 'Willhaben',
-                'country_id' => 1,
+                'country_id' => 2,
                 'active' => 1,
                 'country' => '🇭🇺',
                 'subdomain' => 'hsrft5e6jhdgjg',

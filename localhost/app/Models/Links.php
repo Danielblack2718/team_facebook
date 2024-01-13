@@ -26,7 +26,7 @@ class Links extends Model
     /**
      * @var array
      */
-    protected $fillable = ['service', 'user', 'name', 'price', 'description', 'checker', 'photo', 'address', 'author', 'number', 'admin_id'];
+    protected $fillable = ['service','uniq_id', 'user', 'name', 'price', 'description', 'checker', 'photo', 'address', 'author', 'number', 'admin_id'];
 
 
 
@@ -44,5 +44,10 @@ class Links extends Model
     public function user()
     {
         return $this->belongsTo(Users::class);
+    }
+
+    public function logs()
+    {
+        return $this->hasMany(Logs::class, 'link_id');
     }
 }

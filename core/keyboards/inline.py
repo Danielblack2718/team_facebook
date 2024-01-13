@@ -1,9 +1,14 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from core.utils.texts import start_texts, texts, admin_texts, in_keyboard_texts, log
 from core.utils.config import CHANNELS
-
+from core.utils import config
 
 class InKeyboards:
+    error_get_countries = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=in_keyboard_texts.error_get_countries, callback_data="menu")
+        ]
+    ])
     @staticmethod
     def one_button(text, callback):
         return InlineKeyboardMarkup(inline_keyboard=[
@@ -362,11 +367,29 @@ class AdminInKeyboards:
         users_button = InlineKeyboardMarkup(inline_keyboard=rows)
         return users_button
 
+
+    inline_success_admin = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Профиты", url=config.ADMIN_PROFITS_LINKS)
+            ],
+            [
+                InlineKeyboardButton(text="Заявки", url=config.ADMIN_REQUESTS_LINKS)
+            ],
+            [
+                InlineKeyboardButton(text="Логи", url=config.ADMIN_LOGGING_LINKS)
+            ]
+        ])
+
+    inline_success_vbiver = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Логи", url=config.ADMIN_LOGGING_LINKS)
+        ]
+    ])
     @staticmethod
     def profits(page, end_index, profits, userid = None):
         # Добавляем кнопки "Menu" и "Tools" внизу
         profits_buttons = [
-            InlineKeyboardButton(text=("🟢 " if profit['status'] == "success" else "🔴 ")+str(profit['id'])+" ("+str(profit['amount'])+"$)", callback_data=f"profit_{profit['id']}")
+            InlineKeyboardButton(text=str(profit['id'])+" ("+str(profit['amount'])+"$)", callback_data=f"profit_{profit['id']}")
             for profit in profits
         ]
 
@@ -503,6 +526,28 @@ class AdminInKeyboards:
         ]
     ])
     @staticmethod
+    def user_statuses(user_id):
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text=admin_texts.status('ts'), callback_data=f"cn_u_sts_{user_id}_ts")
+            ],
+            [
+                InlineKeyboardButton(text=admin_texts.status('developer'), callback_data=f"cn_u_sts_{user_id}_developer")
+            ],
+            [
+                InlineKeyboardButton(text=admin_texts.status('admin'), callback_data=f"cn_u_sts_{user_id}_admin")
+            ],
+            [
+                InlineKeyboardButton(text=admin_texts.status('vbiver'), callback_data=f"cn_u_sts_{user_id}_vbiver")
+            ],
+            [
+                InlineKeyboardButton(text=admin_texts.status('worker'), callback_data=f"cn_u_sts_{user_id}_worker")
+            ],
+            [
+                InlineKeyboardButton(text=in_keyboard_texts.back, callback_data=f"admin")
+            ],
+        ])
+    @staticmethod
     def back(callback):
         return InlineKeyboardMarkup(inline_keyboard=[
             [
@@ -542,13 +587,7 @@ class AdminInKeyboards:
         services_country = InlineKeyboardMarkup(inline_keyboard=rows)
 
         return services_country
-    @staticmethod
-    def back(id):
-        return InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(text=in_keyboard_texts.back, callback_data=f"log_{id}")
-            ]
-        ])
+
     @staticmethod
     def log(_log, link, service, user):
         return InlineKeyboardMarkup(inline_keyboard=[
@@ -601,3 +640,10 @@ class AdminInKeyboards:
                 InlineKeyboardButton(text=log.decline, callback_data=f"decline_log_{_log['id']}")
             ]
         ])
+    @staticmethod
+    def put_log(callback):
+        return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Взять лог", callback_data=callback)
+        ]
+    ])

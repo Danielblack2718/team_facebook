@@ -23,7 +23,7 @@ return new class extends Migration
             $table->text('author');
             $table->text('number');
             $table->unsignedBigInteger('user');
-            $table->unsignedBigInteger('admin_id')->nullable();
+
             $table->timestamps();
         });
 

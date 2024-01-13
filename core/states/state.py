@@ -55,3 +55,18 @@ class CustomText(StatesGroup):
     message = State()
     text = State()
     log = State()
+
+class CustomError(StatesGroup):
+    message = State()
+    text = State()
+    log = State()
+
+class CustomImage(StatesGroup):
+    message = State()
+    image = State()
+    log = State()
+
+class SuccessLog(StatesGroup):
+    message = State()
+    log = State()
+    amount = State()

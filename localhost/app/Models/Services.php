@@ -33,8 +33,8 @@ class Services extends Model
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    public function country()
+    public function countries()
     {
-        return $this->belongsTo(Countries::class);
+        return $this->belongsTo(Countries::class, 'country_id');
     }
 }

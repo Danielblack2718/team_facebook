@@ -14,8 +14,9 @@ return new class extends Migration
         Schema::create('profits', function (Blueprint $table) {
             $table->id();
             $table->integer('amount');
-            $table->text('status');
-            $table->bigInteger('user_id');
+            $table->unsignedBigInteger('log_id');
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('admin_id');
             $table->timestamps();
         });
     }
